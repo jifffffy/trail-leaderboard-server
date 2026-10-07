@@ -57,3 +57,9 @@ apps/web/config.yaml
 # Data directory (should be separate repo)
 /data
 data-repo/
+
+# Race data repo: config.yaml + sources/ are tracked; exports are generated
+race-data/organizers/
+race-data/races/
+race-data/aggregates/
+race-data/badges/

@@ -345,6 +345,9 @@ importers:
         specifier: ^4.4.3
         version: 4.6.5
     devDependencies:
+      '@starter/plugin-race-articles':
+        specifier: workspace:*
+        version: link:../plugin-race-articles
       '@types/js-yaml':
         specifier: ^4.0.9
         version: 4.0.9

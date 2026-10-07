@@ -39,6 +39,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@starter/plugin-race-articles": "workspace:*",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.19.43",
     "tsx": "^4.23.12",

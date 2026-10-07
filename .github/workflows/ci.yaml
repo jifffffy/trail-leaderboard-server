@@ -45,10 +45,14 @@ jobs:
       - name: Run tests
         run: pnpm test
 
-      - name: Setup dev data
-        run: pnpm setup:dev --force --seed 42
+      - name: Build data
+        env:
+          LEADERBOARD_DATA_DIR: ./race-data
+        run: pnpm build:data
 
       - name: Build web
+        env:
+          LEADERBOARD_DATA_DIR: ./race-data
         run: pnpm build:web
 
       - name: Disable Jekyll

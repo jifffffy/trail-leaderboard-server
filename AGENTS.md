@@ -86,4 +86,7 @@ Editing `packages/api` source is not picked up by other packages until you re-ru
 - Next config uses `output: "export"`, `images.unoptimized`, and transpiles
   `@starter/leaderboard-api`.
 - CI (`.github/workflows/ci.yaml`) runs: install → `build:packages` → `test` →
-  `setup:dev --force --seed 42` → `build:web` (a clean, full rebuild each run).
+  `build:data` and `build:web` with `LEADERBOARD_DATA_DIR=./race-data` → deploy the
+  export to GitHub Pages. `race-data/` is the committed data repo (`config.yaml` +
+  `sources/races/*.md`); its exported `organizers/`, `races/`, and `.leaderboard.db`
+  are gitignored.
