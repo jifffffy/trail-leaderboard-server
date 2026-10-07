@@ -5,22 +5,17 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createDatabase } from "../client";
 import {
-  activityDefinitionQueries,
-  activityQueries,
   badgeDefinitionQueries,
-  contributorAggregateDefinitionQueries,
-  contributorAggregateQueries,
-  contributorBadgeQueries,
-  contributorQueries,
   globalAggregateQueries,
+  organizerAggregateDefinitionQueries,
+  organizerAggregateQueries,
+  organizerBadgeQueries,
+  organizerQueries,
+  raceDefinitionQueries,
+  raceQueries,
 } from "../queries";
 import { initializeSchema } from "../schema";
-import type {
-  Activity,
-  ActivityDefinition,
-  Contributor,
-  Database,
-} from "../types";
+import type { Database, Organizer, Race, RaceDefinition } from "../types";
 
 describe("Database Queries", () => {
   let db: Database;
@@ -35,9 +30,9 @@ describe("Database Queries", () => {
     await db.close();
   });
 
-  describe("contributorQueries", () => {
-    it("should insert and retrieve a contributor", async () => {
-      const contributor: Contributor = {
+  describe("organizerQueries", () => {
+    it("should insert and retrieve a organizer", async () => {
+      const organizer: Organizer = {
         username: "alice",
         name: "Alice Smith",
         title: "Engineer",
@@ -47,8 +42,8 @@ describe("Database Queries", () => {
         meta: { team: "backend" },
       };
 
-      await contributorQueries.upsert(db, contributor);
-      const retrieved = await contributorQueries.getByUsername(db, "alice");
+      await organizerQueries.upsert(db, organizer);
+      const retrieved = await organizerQueries.getByUsername(db, "alice");
 
       expect(retrieved).not.toBeNull();
       expect(retrieved?.username).toBe("alice");
@@ -63,8 +58,8 @@ describe("Database Queries", () => {
       expect(typeof retrieved?.meta).toBe("object");
     });
 
-    it("should count contributors", async () => {
-      await contributorQueries.upsert(db, {
+    it("should count organizers", async () => {
+      await organizerQueries.upsert(db, {
         username: "alice",
         name: "Alice",
         title: null,
@@ -74,12 +69,12 @@ describe("Database Queries", () => {
         meta: null,
       });
 
-      const count = await contributorQueries.count(db);
+      const count = await organizerQueries.count(db);
       expect(count).toBe(1);
     });
 
-    it("should parse JSON fields correctly when getting all contributors", async () => {
-      await contributorQueries.upsert(db, {
+    it("should parse JSON fields correctly when getting all organizers", async () => {
+      await organizerQueries.upsert(db, {
         username: "alice",
         name: "Alice",
         title: "Developer",
@@ -89,7 +84,7 @@ describe("Database Queries", () => {
         meta: { skills: ["typescript", "react"], experience: 5 },
       });
 
-      await contributorQueries.upsert(db, {
+      await organizerQueries.upsert(db, {
         username: "bob",
         name: "Bob",
         title: "Designer",
@@ -99,11 +94,11 @@ describe("Database Queries", () => {
         meta: { department: "design" },
       });
 
-      const all = await contributorQueries.getAll(db);
+      const all = await organizerQueries.getAll(db);
 
       expect(all).toHaveLength(2);
 
-      // Check first contributor
+      // Check first organizer
       expect(all[0].username).toBe("alice");
       expect(all[0].meta).toEqual({
         skills: ["typescript", "react"],
@@ -111,14 +106,14 @@ describe("Database Queries", () => {
       });
       expect(typeof all[0].meta).toBe("object");
 
-      // Check second contributor
+      // Check second organizer
       expect(all[1].username).toBe("bob");
       expect(all[1].meta).toEqual({ department: "design" });
       expect(typeof all[1].meta).toBe("object");
     });
 
     it("should merge case-variant username on upsert", async () => {
-      await contributorQueries.upsert(db, {
+      await organizerQueries.upsert(db, {
         username: "alice",
         name: "Alice",
         title: null,
@@ -128,7 +123,7 @@ describe("Database Queries", () => {
         meta: null,
       });
 
-      await contributorQueries.upsert(db, {
+      await organizerQueries.upsert(db, {
         username: "Alice",
         name: "Alice Uppercase",
         title: null,
@@ -138,14 +133,14 @@ describe("Database Queries", () => {
         meta: null,
       });
 
-      const all = await contributorQueries.getAll(db);
+      const all = await organizerQueries.getAll(db);
       expect(all).toHaveLength(1);
       expect(all[0].username).toBe("alice");
       expect(all[0].name).toBe("Alice Uppercase");
     });
 
     it("should silently ignore case-variant username on insertOrIgnore", async () => {
-      await contributorQueries.insertOrIgnore(db, {
+      await organizerQueries.insertOrIgnore(db, {
         username: "bob",
         name: "Bob",
         title: null,
@@ -155,7 +150,7 @@ describe("Database Queries", () => {
         meta: null,
       });
 
-      await contributorQueries.insertOrIgnore(db, {
+      await organizerQueries.insertOrIgnore(db, {
         username: "BOB",
         name: "Bob Uppercase",
         title: null,
@@ -165,14 +160,14 @@ describe("Database Queries", () => {
         meta: null,
       });
 
-      const all = await contributorQueries.getAll(db);
+      const all = await organizerQueries.getAll(db);
       expect(all).toHaveLength(1);
       expect(all[0].username).toBe("bob");
       expect(all[0].name).toBe("Bob");
     });
 
-    it("should update existing contributor", async () => {
-      const contributor: Contributor = {
+    it("should update existing organizer", async () => {
+      const organizer: Organizer = {
         username: "alice",
         name: "Alice Smith",
         title: "Engineer",
@@ -182,16 +177,16 @@ describe("Database Queries", () => {
         meta: null,
       };
 
-      await contributorQueries.upsert(db, contributor);
+      await organizerQueries.upsert(db, organizer);
 
       // Update with new data including JSON fields
-      await contributorQueries.upsert(db, {
-        ...contributor,
+      await organizerQueries.upsert(db, {
+        ...organizer,
         title: "Senior Engineer",
         meta: { team: "frontend", level: "senior" },
       });
 
-      const updated = await contributorQueries.getByUsername(db, "alice");
+      const updated = await organizerQueries.getByUsername(db, "alice");
       expect(updated?.username).toBe("alice");
       expect(updated?.name).toBe("Alice Smith");
       expect(updated?.title).toBe("Senior Engineer");
@@ -200,9 +195,9 @@ describe("Database Queries", () => {
     });
   });
 
-  describe("activityDefinitionQueries", () => {
-    it("should insert and retrieve activity definitions", async () => {
-      const def: ActivityDefinition = {
+  describe("raceDefinitionQueries", () => {
+    it("should insert and retrieve race definitions", async () => {
+      const def: RaceDefinition = {
         slug: "pr_merged",
         name: "PR Merged",
         description: "Pull request was merged",
@@ -210,11 +205,8 @@ describe("Database Queries", () => {
         icon: "git-merge",
       };
 
-      await activityDefinitionQueries.insertOrIgnore(db, def);
-      const retrieved = await activityDefinitionQueries.getBySlug(
-        db,
-        "pr_merged",
-      );
+      await raceDefinitionQueries.insertOrIgnore(db, def);
+      const retrieved = await raceDefinitionQueries.getBySlug(db, "pr_merged");
 
       expect(retrieved).not.toBeNull();
       expect(retrieved?.name).toBe("PR Merged");
@@ -222,7 +214,7 @@ describe("Database Queries", () => {
     });
 
     it("should not duplicate definitions with insertOrIgnore", async () => {
-      const def: ActivityDefinition = {
+      const def: RaceDefinition = {
         slug: "pr_merged",
         name: "PR Merged",
         description: "Pull request was merged",
@@ -230,27 +222,24 @@ describe("Database Queries", () => {
         icon: null,
       };
 
-      await activityDefinitionQueries.insertOrIgnore(db, def);
-      await activityDefinitionQueries.insertOrIgnore(db, {
+      await raceDefinitionQueries.insertOrIgnore(db, def);
+      await raceDefinitionQueries.insertOrIgnore(db, {
         ...def,
         points: 20,
       });
 
-      const count = await activityDefinitionQueries.count(db);
+      const count = await raceDefinitionQueries.count(db);
       expect(count).toBe(1);
 
-      const retrieved = await activityDefinitionQueries.getBySlug(
-        db,
-        "pr_merged",
-      );
+      const retrieved = await raceDefinitionQueries.getBySlug(db, "pr_merged");
       expect(retrieved?.points).toBe(10); // Should keep original
     });
   });
 
-  describe("activityQueries", () => {
+  describe("raceQueries", () => {
     beforeEach(async () => {
       // Set up test data
-      await contributorQueries.upsert(db, {
+      await organizerQueries.upsert(db, {
         username: "alice",
         name: "Alice",
         title: null,
@@ -260,7 +249,7 @@ describe("Database Queries", () => {
         meta: null,
       });
 
-      await activityDefinitionQueries.insertOrIgnore(db, {
+      await raceDefinitionQueries.insertOrIgnore(db, {
         slug: "pr_merged",
         name: "PR Merged",
         description: "PR merged",
@@ -269,11 +258,11 @@ describe("Database Queries", () => {
       });
     });
 
-    it("should insert and retrieve activities", async () => {
-      const activity: Activity = {
+    it("should insert and retrieve races", async () => {
+      const race: Race = {
         slug: "alice-pr-1",
-        contributor: "alice",
-        activity_definition: "pr_merged",
+        organizer: "alice",
+        race_definition: "pr_merged",
         title: "Fix bug",
         occurred_at: "2024-01-01T10:00:00Z",
         link: "https://github.com/org/repo/pull/1",
@@ -282,28 +271,28 @@ describe("Database Queries", () => {
         meta: { pr_number: 123, lines_changed: 50 },
       };
 
-      await activityQueries.upsert(db, activity);
-      let activities = await activityQueries.getByContributor(db, "alice");
+      await raceQueries.upsert(db, race);
+      let races = await raceQueries.getByOrganizer(db, "alice");
 
-      expect(activities).toHaveLength(1);
-      expect(activities[0].slug).toBe("alice-pr-1");
-      expect(activities[0].contributor).toBe("alice");
-      expect(activities[0].activity_definition).toBe("pr_merged");
-      expect(activities[0].title).toBe("Fix bug");
-      expect(activities[0].occurred_at).toBe("2024-01-01T10:00:00Z");
-      expect(activities[0].link).toBe("https://github.com/org/repo/pull/1");
-      expect(activities[0].text).toBe("Fixed critical bug in authentication");
-      expect(activities[0].points).toBe(20);
+      expect(races).toHaveLength(1);
+      expect(races[0].slug).toBe("alice-pr-1");
+      expect(races[0].organizer).toBe("alice");
+      expect(races[0].race_definition).toBe("pr_merged");
+      expect(races[0].title).toBe("Fix bug");
+      expect(races[0].occurred_at).toBe("2024-01-01T10:00:00Z");
+      expect(races[0].link).toBe("https://github.com/org/repo/pull/1");
+      expect(races[0].text).toBe("Fixed critical bug in authentication");
+      expect(races[0].points).toBe(20);
 
       // Verify meta is parsed as object
-      expect(activities[0].meta).toEqual({ pr_number: 123, lines_changed: 50 });
-      expect(typeof activities[0].meta).toBe("object");
+      expect(races[0].meta).toEqual({ pr_number: 123, lines_changed: 50 });
+      expect(typeof races[0].meta).toBe("object");
 
       // Test with null points
-      await activityQueries.upsert(db, {
+      await raceQueries.upsert(db, {
         slug: "alice-pr-2",
-        contributor: "alice",
-        activity_definition: "pr_merged",
+        organizer: "alice",
+        race_definition: "pr_merged",
         title: "Another PR",
         occurred_at: "2024-01-02T10:00:00Z",
         link: null,
@@ -312,8 +301,8 @@ describe("Database Queries", () => {
         meta: null,
       });
 
-      // Test with both activity points and definition points null
-      await activityDefinitionQueries.insertOrIgnore(db, {
+      // Test with both race points and definition points null
+      await raceDefinitionQueries.insertOrIgnore(db, {
         slug: "issue_closed",
         name: "Issue Closed",
         description: "Closed an issue",
@@ -321,10 +310,10 @@ describe("Database Queries", () => {
         icon: null,
       });
 
-      await activityQueries.upsert(db, {
+      await raceQueries.upsert(db, {
         slug: "alice-zero-points",
-        contributor: "alice",
-        activity_definition: "issue_closed",
+        organizer: "alice",
+        race_definition: "issue_closed",
         title: "Issue Closed",
         occurred_at: "2024-01-03T10:00:00Z",
         link: null,
@@ -333,18 +322,18 @@ describe("Database Queries", () => {
         meta: null,
       });
 
-      activities = await activityQueries.getByContributor(db, "alice");
-      expect(activities).toHaveLength(3);
-      expect(activities[0].points).toBe(0);
-      expect(activities[1].points).toBe(10);
+      races = await raceQueries.getByOrganizer(db, "alice");
+      expect(races).toHaveLength(3);
+      expect(races[0].points).toBe(0);
+      expect(races[1].points).toBe(10);
     });
 
-    it("should get activities by date range", async () => {
-      await activityQueries.upsert(db, {
+    it("should get races by date range", async () => {
+      await raceQueries.upsert(db, {
         slug: "alice-pr-1",
-        contributor: "alice",
-        activity_definition: "pr_merged",
-        title: "Activity 1",
+        organizer: "alice",
+        race_definition: "pr_merged",
+        title: "Race 1",
         occurred_at: "2024-01-15T10:00:00Z",
         link: null,
         text: null,
@@ -352,11 +341,11 @@ describe("Database Queries", () => {
         meta: { month: "january" },
       });
 
-      await activityQueries.upsert(db, {
+      await raceQueries.upsert(db, {
         slug: "alice-pr-2",
-        contributor: "alice",
-        activity_definition: "pr_merged",
-        title: "Activity 2",
+        organizer: "alice",
+        race_definition: "pr_merged",
+        title: "Race 2",
         occurred_at: "2024-02-15T10:00:00Z",
         link: null,
         text: null,
@@ -364,27 +353,27 @@ describe("Database Queries", () => {
         meta: { month: "february" },
       });
 
-      const activities = await activityQueries.getByDateRange(
+      const races = await raceQueries.getByDateRange(
         db,
         "2024-01-01T00:00:00Z",
         "2024-01-31T23:59:59Z",
       );
 
-      expect(activities).toHaveLength(1);
-      expect(activities[0].slug).toBe("alice-pr-1");
-      expect(activities[0].title).toBe("Activity 1");
-      expect(activities[0].occurred_at).toBe("2024-01-15T10:00:00Z");
-      expect(activities[0].points).toBe(10);
-      expect(activities[0].meta).toEqual({ month: "january" });
-      expect(typeof activities[0].meta).toBe("object");
+      expect(races).toHaveLength(1);
+      expect(races[0].slug).toBe("alice-pr-1");
+      expect(races[0].title).toBe("Race 1");
+      expect(races[0].occurred_at).toBe("2024-01-15T10:00:00Z");
+      expect(races[0].points).toBe(10);
+      expect(races[0].meta).toEqual({ month: "january" });
+      expect(typeof races[0].meta).toBe("object");
     });
 
-    it("should calculate total points for contributor", async () => {
-      await activityQueries.upsert(db, {
+    it("should calculate total points for organizer", async () => {
+      await raceQueries.upsert(db, {
         slug: "alice-pr-1",
-        contributor: "alice",
-        activity_definition: "pr_merged",
-        title: "Activity 1",
+        organizer: "alice",
+        race_definition: "pr_merged",
+        title: "Race 1",
         occurred_at: "2024-01-01T10:00:00Z",
         link: null,
         text: null,
@@ -392,11 +381,11 @@ describe("Database Queries", () => {
         meta: null,
       });
 
-      await activityQueries.upsert(db, {
+      await raceQueries.upsert(db, {
         slug: "alice-pr-2",
-        contributor: "alice",
-        activity_definition: "pr_merged",
-        title: "Activity 2",
+        organizer: "alice",
+        race_definition: "pr_merged",
+        title: "Race 2",
         occurred_at: "2024-01-02T10:00:00Z",
         link: null,
         text: null,
@@ -404,7 +393,7 @@ describe("Database Queries", () => {
         meta: null,
       });
 
-      const totalPoints = await activityQueries.getTotalPointsByContributor(
+      const totalPoints = await raceQueries.getTotalPointsByOrganizer(
         db,
         "alice",
       );
@@ -412,8 +401,8 @@ describe("Database Queries", () => {
     });
 
     it("should generate leaderboard", async () => {
-      // Add another contributor
-      await contributorQueries.upsert(db, {
+      // Add another organizer
+      await organizerQueries.upsert(db, {
         username: "bob",
         name: "Bob",
         title: null,
@@ -423,12 +412,12 @@ describe("Database Queries", () => {
         meta: null,
       });
 
-      // Add activities
-      await activityQueries.upsert(db, {
+      // Add races
+      await raceQueries.upsert(db, {
         slug: "alice-pr-1",
-        contributor: "alice",
-        activity_definition: "pr_merged",
-        title: "Activity 1",
+        organizer: "alice",
+        race_definition: "pr_merged",
+        title: "Race 1",
         occurred_at: "2024-01-01T10:00:00Z",
         link: null,
         text: null,
@@ -436,11 +425,11 @@ describe("Database Queries", () => {
         meta: null,
       });
 
-      await activityQueries.upsert(db, {
+      await raceQueries.upsert(db, {
         slug: "bob-pr-1",
-        contributor: "bob",
-        activity_definition: "pr_merged",
-        title: "Activity 2",
+        organizer: "bob",
+        race_definition: "pr_merged",
+        title: "Race 2",
         occurred_at: "2024-01-02T10:00:00Z",
         link: null,
         text: null,
@@ -448,12 +437,12 @@ describe("Database Queries", () => {
         meta: null,
       });
 
-      const leaderboard = await activityQueries.getLeaderboard(db);
+      const leaderboard = await raceQueries.getLeaderboard(db);
 
       expect(leaderboard).toHaveLength(2);
-      expect(leaderboard[0].contributor).toBe("alice");
+      expect(leaderboard[0].organizer).toBe("alice");
       expect(leaderboard[0].total_points).toBe(20);
-      expect(leaderboard[1].contributor).toBe("bob");
+      expect(leaderboard[1].organizer).toBe("bob");
       expect(leaderboard[1].total_points).toBe(10);
     });
   });
@@ -461,9 +450,9 @@ describe("Database Queries", () => {
   describe("globalAggregateQueries", () => {
     it("should insert and retrieve a global aggregate", async () => {
       await globalAggregateQueries.upsert(db, {
-        slug: "total_contributors",
-        name: "Total Contributors",
-        description: "Total number of contributors",
+        slug: "total_organizers",
+        name: "Total Organizers",
+        description: "Total number of organizers",
         value: {
           type: "number",
           value: 42,
@@ -474,11 +463,11 @@ describe("Database Queries", () => {
 
       const aggregate = await globalAggregateQueries.getBySlug(
         db,
-        "total_contributors",
+        "total_organizers",
       );
 
       expect(aggregate).not.toBeNull();
-      expect(aggregate?.slug).toBe("total_contributors");
+      expect(aggregate?.slug).toBe("total_organizers");
       expect(aggregate?.value.type).toBe("number");
       if (aggregate?.value.type === "number") {
         expect(aggregate.value.value).toBe(42);
@@ -487,16 +476,16 @@ describe("Database Queries", () => {
 
     it("should get all global aggregates", async () => {
       await globalAggregateQueries.upsert(db, {
-        slug: "total_contributors",
-        name: "Total Contributors",
+        slug: "total_organizers",
+        name: "Total Organizers",
         description: null,
         value: { type: "number", value: 42, format: "integer" },
         meta: null,
       });
 
       await globalAggregateQueries.upsert(db, {
-        slug: "total_activities",
-        name: "Total Activities",
+        slug: "total_races",
+        name: "Total Races",
         description: null,
         value: { type: "number", value: 100, format: "integer" },
         meta: null,
@@ -508,16 +497,16 @@ describe("Database Queries", () => {
 
     it("should update existing global aggregate", async () => {
       await globalAggregateQueries.upsert(db, {
-        slug: "total_contributors",
-        name: "Total Contributors",
+        slug: "total_organizers",
+        name: "Total Organizers",
         description: null,
         value: { type: "number", value: 42, format: "integer" },
         meta: null,
       });
 
       await globalAggregateQueries.upsert(db, {
-        slug: "total_contributors",
-        name: "Total Contributors",
+        slug: "total_organizers",
+        name: "Total Organizers",
         description: null,
         value: { type: "number", value: 50, format: "integer" },
         meta: null,
@@ -525,7 +514,7 @@ describe("Database Queries", () => {
 
       const aggregate = await globalAggregateQueries.getBySlug(
         db,
-        "total_contributors",
+        "total_organizers",
       );
       if (aggregate?.value.type === "number") {
         expect(aggregate.value.value).toBe(50);
@@ -544,8 +533,8 @@ describe("Database Queries", () => {
 
       // Statistics aggregate
       await globalAggregateQueries.upsert(db, {
-        slug: "activity_stats",
-        name: "Activity Statistics",
+        slug: "race_stats",
+        name: "Race Statistics",
         description: null,
         value: {
           type: "statistics/number",
@@ -559,10 +548,7 @@ describe("Database Queries", () => {
       });
 
       const stringAgg = await globalAggregateQueries.getBySlug(db, "status");
-      const statsAgg = await globalAggregateQueries.getBySlug(
-        db,
-        "activity_stats",
-      );
+      const statsAgg = await globalAggregateQueries.getBySlug(db, "race_stats");
 
       expect(stringAgg?.value.type).toBe("string");
       expect(statsAgg?.value.type).toBe("statistics/number");
@@ -663,15 +649,15 @@ describe("Database Queries", () => {
     });
   });
 
-  describe("contributorAggregateDefinitionQueries", () => {
+  describe("organizerAggregateDefinitionQueries", () => {
     it("should insert and retrieve aggregate definition", async () => {
-      await contributorAggregateDefinitionQueries.upsert(db, {
+      await organizerAggregateDefinitionQueries.upsert(db, {
         slug: "pr_merged_count",
         name: "PRs Merged",
         description: "Number of pull requests merged",
       });
 
-      const definition = await contributorAggregateDefinitionQueries.getBySlug(
+      const definition = await organizerAggregateDefinitionQueries.getBySlug(
         db,
         "pr_merged_count",
       );
@@ -681,26 +667,25 @@ describe("Database Queries", () => {
     });
 
     it("should get all aggregate definitions", async () => {
-      await contributorAggregateDefinitionQueries.upsert(db, {
+      await organizerAggregateDefinitionQueries.upsert(db, {
         slug: "pr_merged_count",
         name: "PRs Merged",
         description: null,
       });
 
-      await contributorAggregateDefinitionQueries.upsert(db, {
+      await organizerAggregateDefinitionQueries.upsert(db, {
         slug: "code_review_count",
         name: "Code Reviews",
         description: null,
       });
 
-      const definitions =
-        await contributorAggregateDefinitionQueries.getAll(db);
+      const definitions = await organizerAggregateDefinitionQueries.getAll(db);
       expect(definitions).toHaveLength(2);
     });
 
     it("should create definitions with hidden field", async () => {
       // Create visible definition
-      await contributorAggregateDefinitionQueries.upsert(db, {
+      await organizerAggregateDefinitionQueries.upsert(db, {
         slug: "visible_def",
         name: "Visible Definition",
         description: null,
@@ -708,18 +693,18 @@ describe("Database Queries", () => {
       });
 
       // Create hidden definition
-      await contributorAggregateDefinitionQueries.upsert(db, {
+      await organizerAggregateDefinitionQueries.upsert(db, {
         slug: "hidden_def",
         name: "Hidden Definition",
         description: null,
         hidden: true,
       });
 
-      const visible = await contributorAggregateDefinitionQueries.getBySlug(
+      const visible = await organizerAggregateDefinitionQueries.getBySlug(
         db,
         "visible_def",
       );
-      const hidden = await contributorAggregateDefinitionQueries.getBySlug(
+      const hidden = await organizerAggregateDefinitionQueries.getBySlug(
         db,
         "hidden_def",
       );
@@ -731,7 +716,7 @@ describe("Database Queries", () => {
 
     it("should filter hidden definitions with getAllVisible", async () => {
       // Create visible definition
-      await contributorAggregateDefinitionQueries.upsert(db, {
+      await organizerAggregateDefinitionQueries.upsert(db, {
         slug: "visible1",
         name: "Visible 1",
         description: null,
@@ -739,7 +724,7 @@ describe("Database Queries", () => {
       });
 
       // Create hidden definition
-      await contributorAggregateDefinitionQueries.upsert(db, {
+      await organizerAggregateDefinitionQueries.upsert(db, {
         slug: "hidden1",
         name: "Hidden 1",
         description: null,
@@ -747,7 +732,7 @@ describe("Database Queries", () => {
       });
 
       // Create another visible definition (default)
-      await contributorAggregateDefinitionQueries.upsert(db, {
+      await organizerAggregateDefinitionQueries.upsert(db, {
         slug: "visible2",
         name: "Visible 2",
         description: null,
@@ -755,9 +740,9 @@ describe("Database Queries", () => {
       });
 
       const allDefinitions =
-        await contributorAggregateDefinitionQueries.getAll(db);
+        await organizerAggregateDefinitionQueries.getAll(db);
       const visibleDefinitions =
-        await contributorAggregateDefinitionQueries.getAllVisible(db);
+        await organizerAggregateDefinitionQueries.getAllVisible(db);
 
       expect(allDefinitions).toHaveLength(3);
       expect(visibleDefinitions).toHaveLength(2);
@@ -767,14 +752,14 @@ describe("Database Queries", () => {
     });
 
     it("should default hidden to false when not specified", async () => {
-      await contributorAggregateDefinitionQueries.upsert(db, {
+      await organizerAggregateDefinitionQueries.upsert(db, {
         slug: "default_def",
         name: "Default Definition",
         description: null,
         hidden: null,
       });
 
-      const definition = await contributorAggregateDefinitionQueries.getBySlug(
+      const definition = await organizerAggregateDefinitionQueries.getBySlug(
         db,
         "default_def",
       );
@@ -783,10 +768,10 @@ describe("Database Queries", () => {
     });
   });
 
-  describe("contributorAggregateQueries", () => {
+  describe("organizerAggregateQueries", () => {
     beforeEach(async () => {
-      // Setup contributor and aggregate definition
-      await contributorQueries.upsert(db, {
+      // Setup organizer and aggregate definition
+      await organizerQueries.upsert(db, {
         username: "alice",
         name: "Alice",
         title: null,
@@ -796,26 +781,26 @@ describe("Database Queries", () => {
         meta: null,
       });
 
-      await contributorAggregateDefinitionQueries.upsert(db, {
-        slug: "activity_count",
-        name: "Activity Count",
+      await organizerAggregateDefinitionQueries.upsert(db, {
+        slug: "race_count",
+        name: "Race Count",
         description: null,
       });
     });
 
-    it("should insert and retrieve contributor aggregate", async () => {
-      await contributorAggregateQueries.upsert(db, {
-        aggregate: "activity_count",
-        contributor: "alice",
+    it("should insert and retrieve organizer aggregate", async () => {
+      await organizerAggregateQueries.upsert(db, {
+        aggregate: "race_count",
+        organizer: "alice",
         value: { type: "number", value: 42, format: "integer" },
         meta: null,
       });
 
       const aggregate =
-        await contributorAggregateQueries.getByContributorAndAggregate(
+        await organizerAggregateQueries.getByOrganizerAndAggregate(
           db,
           "alice",
-          "activity_count",
+          "race_count",
         );
 
       expect(aggregate).not.toBeNull();
@@ -824,28 +809,28 @@ describe("Database Queries", () => {
       }
     });
 
-    it("should get all aggregates for a contributor", async () => {
-      await contributorAggregateDefinitionQueries.upsert(db, {
+    it("should get all aggregates for a organizer", async () => {
+      await organizerAggregateDefinitionQueries.upsert(db, {
         slug: "total_points",
         name: "Total Points",
         description: null,
       });
 
-      await contributorAggregateQueries.upsert(db, {
-        aggregate: "activity_count",
-        contributor: "alice",
+      await organizerAggregateQueries.upsert(db, {
+        aggregate: "race_count",
+        organizer: "alice",
         value: { type: "number", value: 42, format: "integer" },
         meta: null,
       });
 
-      await contributorAggregateQueries.upsert(db, {
+      await organizerAggregateQueries.upsert(db, {
         aggregate: "total_points",
-        contributor: "alice",
+        organizer: "alice",
         value: { type: "number", value: 250, format: "integer" },
         meta: null,
       });
 
-      const aggregates = await contributorAggregateQueries.getByContributor(
+      const aggregates = await organizerAggregateQueries.getByOrganizer(
         db,
         "alice",
       );
@@ -853,9 +838,9 @@ describe("Database Queries", () => {
     });
 
     it("should handle aggregate with units", async () => {
-      await contributorAggregateQueries.upsert(db, {
-        aggregate: "activity_count",
-        contributor: "alice",
+      await organizerAggregateQueries.upsert(db, {
+        aggregate: "race_count",
+        organizer: "alice",
         value: {
           type: "number",
           value: 7200000,
@@ -866,10 +851,10 @@ describe("Database Queries", () => {
       });
 
       const aggregate =
-        await contributorAggregateQueries.getByContributorAndAggregate(
+        await organizerAggregateQueries.getByOrganizerAndAggregate(
           db,
           "alice",
-          "activity_count",
+          "race_count",
         );
 
       if (aggregate?.value.type === "number") {
@@ -882,16 +867,16 @@ describe("Database Queries", () => {
   describe("badgeDefinitionQueries", () => {
     it("should insert and retrieve badge definition", async () => {
       await badgeDefinitionQueries.upsert(db, {
-        slug: "activity_milestone",
-        name: "Activity Milestone",
-        description: "Awarded for reaching activity milestones",
+        slug: "race_milestone",
+        name: "Race Milestone",
+        description: "Awarded for reaching race milestones",
         variants: {
           bronze: {
-            description: "10+ activities",
+            description: "10+ races",
             svg_url: "https://example.com/bronze.svg",
           },
           silver: {
-            description: "50+ activities",
+            description: "50+ races",
             svg_url: "https://example.com/silver.svg",
           },
         },
@@ -899,11 +884,11 @@ describe("Database Queries", () => {
 
       const badge = await badgeDefinitionQueries.getBySlug(
         db,
-        "activity_milestone",
+        "race_milestone",
       );
 
       expect(badge).not.toBeNull();
-      expect(badge?.name).toBe("Activity Milestone");
+      expect(badge?.name).toBe("Race Milestone");
       expect(badge?.variants.bronze).toBeDefined();
       expect(badge?.variants.silver).toBeDefined();
     });
@@ -928,10 +913,10 @@ describe("Database Queries", () => {
     });
   });
 
-  describe("contributorBadgeQueries", () => {
+  describe("organizerBadgeQueries", () => {
     beforeEach(async () => {
-      // Setup contributor and badge definition
-      await contributorQueries.upsert(db, {
+      // Setup organizer and badge definition
+      await organizerQueries.upsert(db, {
         username: "alice",
         name: "Alice",
         title: null,
@@ -942,8 +927,8 @@ describe("Database Queries", () => {
       });
 
       await badgeDefinitionQueries.upsert(db, {
-        slug: "activity_milestone",
-        name: "Activity Milestone",
+        slug: "race_milestone",
+        name: "Race Milestone",
         description: "Test badge",
         variants: {
           bronze: { description: "10+", svg_url: "url" },
@@ -954,19 +939,19 @@ describe("Database Queries", () => {
     });
 
     it("should award and retrieve a badge", async () => {
-      await contributorBadgeQueries.award(db, {
-        slug: "activity_milestone__alice__bronze",
-        badge: "activity_milestone",
-        contributor: "alice",
+      await organizerBadgeQueries.award(db, {
+        slug: "race_milestone__alice__bronze",
+        badge: "race_milestone",
+        organizer: "alice",
         variant: "bronze",
         achieved_on: "2025-01-05",
         meta: { auto_awarded: true },
       });
 
-      const badge = await contributorBadgeQueries.getByContributorAndBadge(
+      const badge = await organizerBadgeQueries.getByOrganizerAndBadge(
         db,
         "alice",
-        "activity_milestone",
+        "race_milestone",
       );
 
       expect(badge).not.toBeNull();
@@ -974,7 +959,7 @@ describe("Database Queries", () => {
       expect(badge?.achieved_on).toBe("2025-01-05");
     });
 
-    it("should get all badges for a contributor", async () => {
+    it("should get all badges for a organizer", async () => {
       await badgeDefinitionQueries.upsert(db, {
         slug: "streak_badge",
         name: "Streak Badge",
@@ -982,79 +967,76 @@ describe("Database Queries", () => {
         variants: { bronze: { description: "7 days", svg_url: "url" } },
       });
 
-      await contributorBadgeQueries.award(db, {
-        slug: "activity_milestone__alice__bronze",
-        badge: "activity_milestone",
-        contributor: "alice",
+      await organizerBadgeQueries.award(db, {
+        slug: "race_milestone__alice__bronze",
+        badge: "race_milestone",
+        organizer: "alice",
         variant: "bronze",
         achieved_on: "2025-01-05",
         meta: null,
       });
 
-      await contributorBadgeQueries.award(db, {
+      await organizerBadgeQueries.award(db, {
         slug: "streak_badge__alice__bronze",
         badge: "streak_badge",
-        contributor: "alice",
+        organizer: "alice",
         variant: "bronze",
         achieved_on: "2025-01-04",
         meta: null,
       });
 
-      const badges = await contributorBadgeQueries.getByContributor(
-        db,
-        "alice",
-      );
+      const badges = await organizerBadgeQueries.getByOrganizer(db, "alice");
       expect(badges).toHaveLength(2);
     });
 
     it("should check if badge exists", async () => {
-      await contributorBadgeQueries.award(db, {
-        slug: "activity_milestone__alice__bronze",
-        badge: "activity_milestone",
-        contributor: "alice",
+      await organizerBadgeQueries.award(db, {
+        slug: "race_milestone__alice__bronze",
+        badge: "race_milestone",
+        organizer: "alice",
         variant: "bronze",
         achieved_on: "2025-01-05",
         meta: null,
       });
 
-      const exists = await contributorBadgeQueries.exists(
+      const exists = await organizerBadgeQueries.exists(
         db,
         "alice",
-        "activity_milestone",
+        "race_milestone",
         "bronze",
       );
       expect(exists).toBe(true);
 
-      const notExists = await contributorBadgeQueries.exists(
+      const notExists = await organizerBadgeQueries.exists(
         db,
         "alice",
-        "activity_milestone",
+        "race_milestone",
         "gold",
       );
       expect(notExists).toBe(false);
     });
 
     it("should upgrade a badge variant", async () => {
-      await contributorBadgeQueries.award(db, {
-        slug: "activity_milestone__alice__bronze",
-        badge: "activity_milestone",
-        contributor: "alice",
+      await organizerBadgeQueries.award(db, {
+        slug: "race_milestone__alice__bronze",
+        badge: "race_milestone",
+        organizer: "alice",
         variant: "bronze",
         achieved_on: "2025-01-01",
         meta: null,
       });
 
-      await contributorBadgeQueries.upgrade(
+      await organizerBadgeQueries.upgrade(
         db,
-        "activity_milestone__alice__bronze",
+        "race_milestone__alice__bronze",
         "silver",
         { upgraded: true },
       );
 
-      const badge = await contributorBadgeQueries.getByContributorAndBadge(
+      const badge = await organizerBadgeQueries.getByOrganizerAndBadge(
         db,
         "alice",
-        "activity_milestone",
+        "race_milestone",
       );
 
       expect(badge?.variant).toBe("silver");
@@ -1062,35 +1044,32 @@ describe("Database Queries", () => {
     });
 
     it("should not award duplicate badges", async () => {
-      await contributorBadgeQueries.award(db, {
-        slug: "activity_milestone__alice__bronze",
-        badge: "activity_milestone",
-        contributor: "alice",
+      await organizerBadgeQueries.award(db, {
+        slug: "race_milestone__alice__bronze",
+        badge: "race_milestone",
+        organizer: "alice",
         variant: "bronze",
         achieved_on: "2025-01-05",
         meta: null,
       });
 
       // Try to award same badge again (should be ignored due to INSERT OR IGNORE)
-      await contributorBadgeQueries.award(db, {
-        slug: "activity_milestone__alice__bronze",
-        badge: "activity_milestone",
-        contributor: "alice",
+      await organizerBadgeQueries.award(db, {
+        slug: "race_milestone__alice__bronze",
+        badge: "race_milestone",
+        organizer: "alice",
         variant: "bronze",
         achieved_on: "2025-01-06",
         meta: null,
       });
 
-      const badges = await contributorBadgeQueries.getByContributor(
-        db,
-        "alice",
-      );
+      const badges = await organizerBadgeQueries.getByOrganizer(db, "alice");
       expect(badges).toHaveLength(1);
     });
   });
 });
 
-describe("activityQueries", () => {
+describe("raceQueries", () => {
   let db: Database;
 
   beforeEach(async () => {
@@ -1098,7 +1077,7 @@ describe("activityQueries", () => {
     await initializeSchema(db);
 
     // Set up test data
-    await contributorQueries.upsert(db, {
+    await organizerQueries.upsert(db, {
       username: "test_user",
       name: "Test User",
       title: null,
@@ -1108,7 +1087,7 @@ describe("activityQueries", () => {
       meta: null,
     });
 
-    await activityDefinitionQueries.insertOrIgnore(db, {
+    await raceDefinitionQueries.insertOrIgnore(db, {
       slug: "pull_request_opened",
       name: "PR Opened",
       description: "Opened a pull request",
@@ -1116,7 +1095,7 @@ describe("activityQueries", () => {
       points: 10,
     });
 
-    await activityDefinitionQueries.insertOrIgnore(db, {
+    await raceDefinitionQueries.insertOrIgnore(db, {
       slug: "pull_request_merged",
       name: "PR Merged",
       description: "Merged a pull request",
@@ -1124,7 +1103,7 @@ describe("activityQueries", () => {
       points: 20,
     });
 
-    await activityDefinitionQueries.insertOrIgnore(db, {
+    await raceDefinitionQueries.insertOrIgnore(db, {
       slug: "issue_created",
       name: "Issue Created",
       description: "Created an issue",
@@ -1138,11 +1117,11 @@ describe("activityQueries", () => {
   });
 
   describe("getByDefinitions", () => {
-    it("should filter by multiple activity definitions", async () => {
-      await activityQueries.upsert(db, {
-        slug: "activity_1",
-        contributor: "test_user",
-        activity_definition: "pull_request_opened",
+    it("should filter by multiple race definitions", async () => {
+      await raceQueries.upsert(db, {
+        slug: "race_1",
+        organizer: "test_user",
+        race_definition: "pull_request_opened",
         title: "PR 1",
         occurred_at: "2025-01-01",
         link: null,
@@ -1151,10 +1130,10 @@ describe("activityQueries", () => {
         meta: null,
       });
 
-      await activityQueries.upsert(db, {
-        slug: "activity_2",
-        contributor: "test_user",
-        activity_definition: "pull_request_merged",
+      await raceQueries.upsert(db, {
+        slug: "race_2",
+        organizer: "test_user",
+        race_definition: "pull_request_merged",
         title: "PR 2",
         occurred_at: "2025-01-02",
         link: null,
@@ -1163,10 +1142,10 @@ describe("activityQueries", () => {
         meta: null,
       });
 
-      await activityQueries.upsert(db, {
-        slug: "activity_3",
-        contributor: "test_user",
-        activity_definition: "issue_created",
+      await raceQueries.upsert(db, {
+        slug: "race_3",
+        organizer: "test_user",
+        race_definition: "issue_created",
         title: "Issue 1",
         occurred_at: "2025-01-03",
         link: null,
@@ -1175,28 +1154,28 @@ describe("activityQueries", () => {
         meta: null,
       });
 
-      const result = await activityQueries.getByDefinitions(db, [
+      const result = await raceQueries.getByDefinitions(db, [
         "pull_request_opened",
         "pull_request_merged",
       ]);
 
       expect(result).toHaveLength(2);
-      expect(result.map((a) => a.activity_definition)).toContain(
+      expect(result.map((a) => a.race_definition)).toContain(
         "pull_request_opened",
       );
-      expect(result.map((a) => a.activity_definition)).toContain(
+      expect(result.map((a) => a.race_definition)).toContain(
         "pull_request_merged",
       );
-      expect(result.map((a) => a.activity_definition)).not.toContain(
+      expect(result.map((a) => a.race_definition)).not.toContain(
         "issue_created",
       );
     });
 
     it("should return all when empty array", async () => {
-      await activityQueries.upsert(db, {
-        slug: "activity_1",
-        contributor: "test_user",
-        activity_definition: "pull_request_opened",
+      await raceQueries.upsert(db, {
+        slug: "race_1",
+        organizer: "test_user",
+        race_definition: "pull_request_opened",
         title: "PR 1",
         occurred_at: "2025-01-01",
         link: null,
@@ -1205,10 +1184,10 @@ describe("activityQueries", () => {
         meta: null,
       });
 
-      await activityQueries.upsert(db, {
-        slug: "activity_2",
-        contributor: "test_user",
-        activity_definition: "issue_created",
+      await raceQueries.upsert(db, {
+        slug: "race_2",
+        organizer: "test_user",
+        race_definition: "issue_created",
         title: "Issue 1",
         occurred_at: "2025-01-02",
         link: null,
@@ -1217,15 +1196,15 @@ describe("activityQueries", () => {
         meta: null,
       });
 
-      const result = await activityQueries.getByDefinitions(db, []);
+      const result = await raceQueries.getByDefinitions(db, []);
 
       expect(result.length).toBeGreaterThanOrEqual(2);
     });
   });
 
-  describe("getByContributorAndDefinitions", () => {
-    it("should filter by contributor and definitions", async () => {
-      await contributorQueries.upsert(db, {
+  describe("getByOrganizerAndDefinitions", () => {
+    it("should filter by organizer and definitions", async () => {
+      await organizerQueries.upsert(db, {
         username: "user2",
         name: "User 2",
         joining_date: "2025-01-01",
@@ -1235,10 +1214,10 @@ describe("activityQueries", () => {
         meta: null,
       });
 
-      await activityQueries.upsert(db, {
-        slug: "activity_1",
-        contributor: "test_user",
-        activity_definition: "pull_request_opened",
+      await raceQueries.upsert(db, {
+        slug: "race_1",
+        organizer: "test_user",
+        race_definition: "pull_request_opened",
         title: "PR 1",
         occurred_at: "2025-01-01",
         link: null,
@@ -1247,10 +1226,10 @@ describe("activityQueries", () => {
         meta: null,
       });
 
-      await activityQueries.upsert(db, {
-        slug: "activity_2",
-        contributor: "test_user",
-        activity_definition: "issue_created",
+      await raceQueries.upsert(db, {
+        slug: "race_2",
+        organizer: "test_user",
+        race_definition: "issue_created",
         title: "Issue 1",
         occurred_at: "2025-01-02",
         link: null,
@@ -1259,10 +1238,10 @@ describe("activityQueries", () => {
         meta: null,
       });
 
-      await activityQueries.upsert(db, {
-        slug: "activity_3",
-        contributor: "user2",
-        activity_definition: "pull_request_opened",
+      await raceQueries.upsert(db, {
+        slug: "race_3",
+        organizer: "user2",
+        race_definition: "pull_request_opened",
         title: "PR 2",
         occurred_at: "2025-01-03",
         link: null,
@@ -1271,22 +1250,22 @@ describe("activityQueries", () => {
         meta: null,
       });
 
-      const result = await activityQueries.getByContributorAndDefinitions(
+      const result = await raceQueries.getByOrganizerAndDefinitions(
         db,
         "test_user",
         ["pull_request_opened"],
       );
 
       expect(result).toHaveLength(1);
-      expect(result[0].contributor).toBe("test_user");
-      expect(result[0].activity_definition).toBe("pull_request_opened");
+      expect(result[0].organizer).toBe("test_user");
+      expect(result[0].race_definition).toBe("pull_request_opened");
     });
   });
 
   describe("Optimized Query Methods", () => {
-    describe("contributorQueries.getAllUsernames", () => {
+    describe("organizerQueries.getAllUsernames", () => {
       it("should return only usernames", async () => {
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "alice_username",
           name: "Alice Smith",
           title: null,
@@ -1296,7 +1275,7 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "bob_username",
           name: "Bob Jones",
           title: null,
@@ -1306,7 +1285,7 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        const usernames = await contributorQueries.getAllUsernames(db);
+        const usernames = await organizerQueries.getAllUsernames(db);
 
         expect(usernames.length).toBeGreaterThanOrEqual(2);
         expect(usernames).toContain("alice_username");
@@ -1315,7 +1294,7 @@ describe("activityQueries", () => {
       });
 
       it("should return sorted usernames", async () => {
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "zebra",
           name: "Zebra",
           title: null,
@@ -1325,7 +1304,7 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "alpha",
           name: "Alpha",
           title: null,
@@ -1335,7 +1314,7 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        const usernames = await contributorQueries.getAllUsernames(db);
+        const usernames = await organizerQueries.getAllUsernames(db);
 
         const alphaIndex = usernames.indexOf("alpha");
         const zebraIndex = usernames.indexOf("zebra");
@@ -1343,17 +1322,17 @@ describe("activityQueries", () => {
       });
     });
 
-    describe("contributorQueries.getLeaderboardWithPoints", () => {
+    describe("organizerQueries.getLeaderboardWithPoints", () => {
       beforeEach(async () => {
-        await activityDefinitionQueries.insertOrIgnore(db, {
-          slug: "test_activity",
-          name: "Test Activity",
+        await raceDefinitionQueries.insertOrIgnore(db, {
+          slug: "test_race",
+          name: "Test Race",
           description: "Test",
           points: 10,
           icon: null,
         });
 
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "alice",
           name: "Alice",
           title: null,
@@ -1363,7 +1342,7 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "bob",
           name: "Bob",
           title: null,
@@ -1373,7 +1352,7 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "charlie",
           name: "Charlie",
           title: null,
@@ -1383,11 +1362,11 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: "act1",
-          contributor: "alice",
-          activity_definition: "test_activity",
-          title: "Activity 1",
+          organizer: "alice",
+          race_definition: "test_race",
+          title: "Race 1",
           occurred_at: "2025-01-01",
           link: null,
           text: null,
@@ -1395,11 +1374,11 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: "act2",
-          contributor: "bob",
-          activity_definition: "test_activity",
-          title: "Activity 2",
+          organizer: "bob",
+          race_definition: "test_race",
+          title: "Race 2",
           occurred_at: "2025-01-02",
           link: null,
           text: null,
@@ -1408,8 +1387,8 @@ describe("activityQueries", () => {
         });
       });
 
-      it("should return contributors with total points", async () => {
-        const result = await contributorQueries.getLeaderboardWithPoints(db);
+      it("should return organizers with total points", async () => {
+        const result = await organizerQueries.getLeaderboardWithPoints(db);
 
         expect(result.length).toBeGreaterThanOrEqual(3);
 
@@ -1422,25 +1401,25 @@ describe("activityQueries", () => {
         expect(charlie?.totalPoints).toBe(0);
       });
 
-      it("should include contributor details", async () => {
-        const result = await contributorQueries.getLeaderboardWithPoints(db);
+      it("should include organizer details", async () => {
+        const result = await organizerQueries.getLeaderboardWithPoints(db);
 
         expect(result[0].name).toBe("Alice");
         expect(result[0].avatar_url).toBe("https://example.com/alice.png");
       });
     });
 
-    describe("activityQueries.getLeaderboardEnriched", () => {
+    describe("raceQueries.getLeaderboardEnriched", () => {
       beforeEach(async () => {
-        await activityDefinitionQueries.insertOrIgnore(db, {
-          slug: "test_activity",
-          name: "Test Activity",
+        await raceDefinitionQueries.insertOrIgnore(db, {
+          slug: "test_race",
+          name: "Test Race",
           description: "Test",
           points: 10,
           icon: null,
         });
 
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "alice",
           name: "Alice Smith",
           title: null,
@@ -1450,11 +1429,11 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: "act1",
-          contributor: "alice",
-          activity_definition: "test_activity",
-          title: "Activity 1",
+          organizer: "alice",
+          race_definition: "test_race",
+          title: "Race 1",
           occurred_at: "2025-01-01T10:00:00Z",
           link: null,
           text: null,
@@ -1462,11 +1441,11 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: "act2",
-          contributor: "alice",
-          activity_definition: "test_activity",
-          title: "Activity 2",
+          organizer: "alice",
+          race_definition: "test_race",
+          title: "Race 2",
           occurred_at: "2025-01-05T10:00:00Z",
           link: null,
           text: null,
@@ -1475,19 +1454,19 @@ describe("activityQueries", () => {
         });
       });
 
-      it("should return leaderboard with contributor details", async () => {
-        const result = await activityQueries.getLeaderboardEnriched(db);
+      it("should return leaderboard with organizer details", async () => {
+        const result = await raceQueries.getLeaderboardEnriched(db);
 
         expect(result).toHaveLength(1);
         expect(result[0].username).toBe("alice");
         expect(result[0].name).toBe("Alice Smith");
         expect(result[0].avatar_url).toBe("https://example.com/alice.png");
         expect(result[0].total_points).toBe(150);
-        expect(result[0].activity_count).toBe(2);
+        expect(result[0].race_count).toBe(2);
       });
 
       it("should filter by date range", async () => {
-        const result = await activityQueries.getLeaderboardEnriched(
+        const result = await raceQueries.getLeaderboardEnriched(
           db,
           undefined,
           "2025-01-04T00:00:00Z",
@@ -1496,11 +1475,11 @@ describe("activityQueries", () => {
 
         expect(result).toHaveLength(1);
         expect(result[0].total_points).toBe(50);
-        expect(result[0].activity_count).toBe(1);
+        expect(result[0].race_count).toBe(1);
       });
 
       it("should respect limit", async () => {
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "bob",
           name: "Bob",
           title: null,
@@ -1510,11 +1489,11 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: "act3",
-          contributor: "bob",
-          activity_definition: "test_activity",
-          title: "Activity 3",
+          organizer: "bob",
+          race_definition: "test_race",
+          title: "Race 3",
           occurred_at: "2025-01-02T10:00:00Z",
           link: null,
           text: null,
@@ -1522,16 +1501,16 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        const result = await activityQueries.getLeaderboardEnriched(db, 1);
+        const result = await raceQueries.getLeaderboardEnriched(db, 1);
 
         expect(result).toHaveLength(1);
         expect(result[0].username).toBe("alice");
       });
     });
 
-    describe("activityQueries.getRecentActivitiesEnriched", () => {
+    describe("raceQueries.getRecentRacesEnriched", () => {
       beforeEach(async () => {
-        await activityDefinitionQueries.insertOrIgnore(db, {
+        await raceDefinitionQueries.insertOrIgnore(db, {
           slug: "pr_opened",
           name: "PR Opened",
           description: "Opened a pull request",
@@ -1539,7 +1518,7 @@ describe("activityQueries", () => {
           icon: null,
         });
 
-        await activityDefinitionQueries.insertOrIgnore(db, {
+        await raceDefinitionQueries.insertOrIgnore(db, {
           slug: "issue_created",
           name: "Issue Created",
           description: "Created an issue",
@@ -1547,7 +1526,7 @@ describe("activityQueries", () => {
           icon: null,
         });
 
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "alice",
           name: "Alice Smith",
           title: null,
@@ -1557,10 +1536,10 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: "act1",
-          contributor: "alice",
-          activity_definition: "pr_opened",
+          organizer: "alice",
+          race_definition: "pr_opened",
           title: "PR #1",
           occurred_at: "2025-01-02T10:00:00Z",
           link: "https://github.com/pr/1",
@@ -1569,10 +1548,10 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: "act2",
-          contributor: "alice",
-          activity_definition: "issue_created",
+          organizer: "alice",
+          race_definition: "issue_created",
           title: "Issue #1",
           occurred_at: "2025-01-03T10:00:00Z",
           link: null,
@@ -1582,37 +1561,37 @@ describe("activityQueries", () => {
         });
       });
 
-      it("should return enriched activities", async () => {
-        const result = await activityQueries.getRecentActivitiesEnriched(
+      it("should return enriched races", async () => {
+        const result = await raceQueries.getRecentRacesEnriched(
           db,
           "2025-01-01T00:00:00Z",
           "2025-01-05T00:00:00Z",
         );
 
         expect(result).toHaveLength(2);
-        expect(result[0].activity_name).toBe("Issue Created");
-        expect(result[0].contributor_name).toBe("Alice Smith");
-        expect(result[0].contributor_avatar_url).toBe(
+        expect(result[0].race_name).toBe("Issue Created");
+        expect(result[0].organizer_name).toBe("Alice Smith");
+        expect(result[0].organizer_avatar_url).toBe(
           "https://example.com/alice.png",
         );
-        expect(result[1].activity_name).toBe("PR Opened");
+        expect(result[1].race_name).toBe("PR Opened");
       });
 
       it("should filter by date range", async () => {
-        const result = await activityQueries.getRecentActivitiesEnriched(
+        const result = await raceQueries.getRecentRacesEnriched(
           db,
           "2025-01-03T00:00:00Z",
           "2025-01-04T00:00:00Z",
         );
 
         expect(result).toHaveLength(1);
-        expect(result[0].activity_definition).toBe("issue_created");
+        expect(result[0].race_definition).toBe("issue_created");
       });
     });
 
-    describe("activityQueries.getTopByActivityEnriched", () => {
+    describe("raceQueries.getTopByRaceEnriched", () => {
       beforeEach(async () => {
-        await activityDefinitionQueries.insertOrIgnore(db, {
+        await raceDefinitionQueries.insertOrIgnore(db, {
           slug: "pr_opened",
           name: "PR Opened",
           description: "Opened a pull request",
@@ -1620,7 +1599,7 @@ describe("activityQueries", () => {
           icon: null,
         });
 
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "alice",
           name: "Alice",
           title: null,
@@ -1630,7 +1609,7 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "bob",
           name: "Bob",
           title: null,
@@ -1640,10 +1619,10 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: "act1",
-          contributor: "alice",
-          activity_definition: "pr_opened",
+          organizer: "alice",
+          race_definition: "pr_opened",
           title: "PR #1",
           occurred_at: "2025-01-02T10:00:00Z",
           link: null,
@@ -1652,10 +1631,10 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: "act2",
-          contributor: "alice",
-          activity_definition: "pr_opened",
+          organizer: "alice",
+          race_definition: "pr_opened",
           title: "PR #2",
           occurred_at: "2025-01-03T10:00:00Z",
           link: null,
@@ -1664,10 +1643,10 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: "act3",
-          contributor: "bob",
-          activity_definition: "pr_opened",
+          organizer: "bob",
+          race_definition: "pr_opened",
           title: "PR #3",
           occurred_at: "2025-01-04T10:00:00Z",
           link: null,
@@ -1677,11 +1656,8 @@ describe("activityQueries", () => {
         });
       });
 
-      it("should return top contributors for activity", async () => {
-        const result = await activityQueries.getTopByActivityEnriched(
-          db,
-          "pr_opened",
-        );
+      it("should return top organizers for race", async () => {
+        const result = await raceQueries.getTopByRaceEnriched(db, "pr_opened");
 
         expect(result).toHaveLength(2);
         expect(result[0].username).toBe("alice");
@@ -1693,7 +1669,7 @@ describe("activityQueries", () => {
       });
 
       it("should filter by date range", async () => {
-        const result = await activityQueries.getTopByActivityEnriched(
+        const result = await raceQueries.getTopByRaceEnriched(
           db,
           "pr_opened",
           "2025-01-03T00:00:00Z",
@@ -1708,7 +1684,7 @@ describe("activityQueries", () => {
       });
 
       it("should respect limit", async () => {
-        const result = await activityQueries.getTopByActivityEnriched(
+        const result = await raceQueries.getTopByRaceEnriched(
           db,
           "pr_opened",
           undefined,
@@ -1721,17 +1697,17 @@ describe("activityQueries", () => {
       });
     });
 
-    describe("activityQueries.getActivityCountByDate", () => {
+    describe("raceQueries.getRaceCountByDate", () => {
       beforeEach(async () => {
-        await activityDefinitionQueries.insertOrIgnore(db, {
-          slug: "test_activity",
-          name: "Test Activity",
+        await raceDefinitionQueries.insertOrIgnore(db, {
+          slug: "test_race",
+          name: "Test Race",
           description: "Test",
           points: 10,
           icon: null,
         });
 
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "alice",
           name: "Alice",
           title: null,
@@ -1741,11 +1717,11 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: "act1",
-          contributor: "alice",
-          activity_definition: "test_activity",
-          title: "Activity 1",
+          organizer: "alice",
+          race_definition: "test_race",
+          title: "Race 1",
           occurred_at: "2025-01-01T10:00:00Z",
           link: null,
           text: null,
@@ -1753,11 +1729,11 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: "act2",
-          contributor: "alice",
-          activity_definition: "test_activity",
-          title: "Activity 2",
+          organizer: "alice",
+          race_definition: "test_race",
+          title: "Race 2",
           occurred_at: "2025-01-01T14:00:00Z",
           link: null,
           text: null,
@@ -1765,11 +1741,11 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: "act3",
-          contributor: "alice",
-          activity_definition: "test_activity",
-          title: "Activity 3",
+          organizer: "alice",
+          race_definition: "test_race",
+          title: "Race 3",
           occurred_at: "2025-01-02T10:00:00Z",
           link: null,
           text: null,
@@ -1778,11 +1754,8 @@ describe("activityQueries", () => {
         });
       });
 
-      it("should group activities by date", async () => {
-        const result = await activityQueries.getActivityCountByDate(
-          db,
-          "alice",
-        );
+      it("should group races by date", async () => {
+        const result = await raceQueries.getRaceCountByDate(db, "alice");
 
         expect(result).toHaveLength(2);
         expect(result[0].date).toBe("2025-01-01");
@@ -1791,8 +1764,8 @@ describe("activityQueries", () => {
         expect(result[1].count).toBe(1);
       });
 
-      it("should return empty array for contributor with no activities", async () => {
-        await contributorQueries.upsert(db, {
+      it("should return empty array for organizer with no races", async () => {
+        await organizerQueries.upsert(db, {
           username: "bob",
           name: "Bob",
           title: null,
@@ -1802,7 +1775,7 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        const result = await activityQueries.getActivityCountByDate(db, "bob");
+        const result = await raceQueries.getRaceCountByDate(db, "bob");
 
         expect(result).toHaveLength(0);
       });
@@ -1867,9 +1840,9 @@ describe("activityQueries", () => {
       });
     });
 
-    describe("contributorAggregateQueries.getByContributorEnriched", () => {
+    describe("organizerAggregateQueries.getByOrganizerEnriched", () => {
       beforeEach(async () => {
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "alice",
           name: "Alice",
           title: null,
@@ -1879,56 +1852,55 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await contributorAggregateDefinitionQueries.upsert(db, {
+        await organizerAggregateDefinitionQueries.upsert(db, {
           slug: "pr_count",
           name: "PR Count",
           description: "Number of PRs",
           hidden: false,
         });
 
-        await contributorAggregateDefinitionQueries.upsert(db, {
+        await organizerAggregateDefinitionQueries.upsert(db, {
           slug: "issue_count",
           name: "Issue Count",
           description: "Number of issues",
           hidden: false,
         });
 
-        await contributorAggregateDefinitionQueries.upsert(db, {
+        await organizerAggregateDefinitionQueries.upsert(db, {
           slug: "hidden_stat",
           name: "Hidden Stat",
           description: "Should not appear",
           hidden: true,
         });
 
-        await contributorAggregateQueries.upsert(db, {
+        await organizerAggregateQueries.upsert(db, {
           aggregate: "pr_count",
-          contributor: "alice",
+          organizer: "alice",
           value: { type: "number", value: 10 },
           meta: null,
         });
 
-        await contributorAggregateQueries.upsert(db, {
+        await organizerAggregateQueries.upsert(db, {
           aggregate: "issue_count",
-          contributor: "alice",
+          organizer: "alice",
           value: { type: "number", value: 5 },
           meta: null,
         });
 
-        await contributorAggregateQueries.upsert(db, {
+        await organizerAggregateQueries.upsert(db, {
           aggregate: "hidden_stat",
-          contributor: "alice",
+          organizer: "alice",
           value: { type: "number", value: 999 },
           meta: null,
         });
       });
 
       it("should return enriched aggregates", async () => {
-        const result =
-          await contributorAggregateQueries.getByContributorEnriched(
-            db,
-            "alice",
-            ["pr_count", "issue_count"],
-          );
+        const result = await organizerAggregateQueries.getByOrganizerEnriched(
+          db,
+          "alice",
+          ["pr_count", "issue_count"],
+        );
 
         expect(result).toHaveLength(2);
         expect(result[0].aggregate).toBe("issue_count");
@@ -1938,32 +1910,30 @@ describe("activityQueries", () => {
       });
 
       it("should filter out hidden aggregates", async () => {
-        const result =
-          await contributorAggregateQueries.getByContributorEnriched(
-            db,
-            "alice",
-            ["pr_count", "hidden_stat"],
-          );
+        const result = await organizerAggregateQueries.getByOrganizerEnriched(
+          db,
+          "alice",
+          ["pr_count", "hidden_stat"],
+        );
 
         expect(result).toHaveLength(1);
         expect(result[0].aggregate).toBe("pr_count");
       });
 
       it("should return empty array for empty slugs", async () => {
-        const result =
-          await contributorAggregateQueries.getByContributorEnriched(
-            db,
-            "alice",
-            [],
-          );
+        const result = await organizerAggregateQueries.getByOrganizerEnriched(
+          db,
+          "alice",
+          [],
+        );
 
         expect(result).toHaveLength(0);
       });
     });
 
-    describe("contributorBadgeQueries.getRecentEnriched", () => {
+    describe("organizerBadgeQueries.getRecentEnriched", () => {
       beforeEach(async () => {
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "alice",
           name: "Alice Smith",
           title: null,
@@ -1973,7 +1943,7 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "bob",
           name: "Bob Jones",
           title: null,
@@ -1984,8 +1954,8 @@ describe("activityQueries", () => {
         });
 
         await badgeDefinitionQueries.upsert(db, {
-          slug: "contributor",
-          name: "Contributor Badge",
+          slug: "organizer",
+          name: "Organizer Badge",
           description: "First contribution",
           variants: {
             bronze: { description: "Bronze", svg_url: "/bronze.svg" },
@@ -1993,19 +1963,19 @@ describe("activityQueries", () => {
           },
         });
 
-        await contributorBadgeQueries.award(db, {
+        await organizerBadgeQueries.award(db, {
           slug: "badge1",
-          badge: "contributor",
-          contributor: "alice",
+          badge: "organizer",
+          organizer: "alice",
           variant: "bronze",
           achieved_on: "2025-01-01",
           meta: null,
         });
 
-        await contributorBadgeQueries.award(db, {
+        await organizerBadgeQueries.award(db, {
           slug: "badge2",
-          badge: "contributor",
-          contributor: "bob",
+          badge: "organizer",
+          organizer: "bob",
           variant: "silver",
           achieved_on: "2025-01-02",
           meta: null,
@@ -2013,28 +1983,28 @@ describe("activityQueries", () => {
       });
 
       it("should return enriched badges", async () => {
-        const result = await contributorBadgeQueries.getRecentEnriched(db, 10);
+        const result = await organizerBadgeQueries.getRecentEnriched(db, 10);
 
         expect(result).toHaveLength(2);
-        expect(result[0].contributor).toBe("bob");
-        expect(result[0].contributor_name).toBe("Bob Jones");
-        expect(result[0].badge_name).toBe("Contributor Badge");
+        expect(result[0].organizer).toBe("bob");
+        expect(result[0].organizer_name).toBe("Bob Jones");
+        expect(result[0].badge_name).toBe("Organizer Badge");
         expect(result[0].badge_variants).toHaveProperty("bronze");
-        expect(result[1].contributor).toBe("alice");
-        expect(result[1].contributor_avatar_url).toBe(
+        expect(result[1].organizer).toBe("alice");
+        expect(result[1].organizer_avatar_url).toBe(
           "https://example.com/alice.png",
         );
       });
 
       it("should respect limit", async () => {
-        const result = await contributorBadgeQueries.getRecentEnriched(db, 1);
+        const result = await organizerBadgeQueries.getRecentEnriched(db, 1);
 
         expect(result).toHaveLength(1);
-        expect(result[0].contributor).toBe("bob");
+        expect(result[0].organizer).toBe("bob");
       });
 
       it("should sort by achieved_on descending", async () => {
-        const result = await contributorBadgeQueries.getRecentEnriched(db);
+        const result = await organizerBadgeQueries.getRecentEnriched(db);
 
         expect(
           new Date(result[0].achieved_on).getTime(),
@@ -2042,9 +2012,9 @@ describe("activityQueries", () => {
       });
     });
 
-    describe("contributorBadgeQueries.getTopEarnersEnriched", () => {
+    describe("organizerBadgeQueries.getTopEarnersEnriched", () => {
       beforeEach(async () => {
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "alice",
           name: "Alice Smith",
           title: null,
@@ -2054,7 +2024,7 @@ describe("activityQueries", () => {
           meta: null,
         });
 
-        await contributorQueries.upsert(db, {
+        await organizerQueries.upsert(db, {
           username: "bob",
           name: "Bob Jones",
           title: null,
@@ -2078,28 +2048,28 @@ describe("activityQueries", () => {
           variants: { default: { description: "Default", svg_url: "/2.svg" } },
         });
 
-        await contributorBadgeQueries.award(db, {
+        await organizerBadgeQueries.award(db, {
           slug: "b1",
           badge: "badge1",
-          contributor: "alice",
+          organizer: "alice",
           variant: "default",
           achieved_on: "2025-01-01",
           meta: null,
         });
 
-        await contributorBadgeQueries.award(db, {
+        await organizerBadgeQueries.award(db, {
           slug: "b2",
           badge: "badge2",
-          contributor: "alice",
+          organizer: "alice",
           variant: "default",
           achieved_on: "2025-01-02",
           meta: null,
         });
 
-        await contributorBadgeQueries.award(db, {
+        await organizerBadgeQueries.award(db, {
           slug: "b3",
           badge: "badge1",
-          contributor: "bob",
+          organizer: "bob",
           variant: "default",
           achieved_on: "2025-01-03",
           meta: null,
@@ -2107,7 +2077,7 @@ describe("activityQueries", () => {
       });
 
       it("should return top earners with badge count", async () => {
-        const result = await contributorBadgeQueries.getTopEarnersEnriched(
+        const result = await organizerBadgeQueries.getTopEarnersEnriched(
           db,
           10,
         );
@@ -2121,17 +2091,14 @@ describe("activityQueries", () => {
       });
 
       it("should respect limit", async () => {
-        const result = await contributorBadgeQueries.getTopEarnersEnriched(
-          db,
-          1,
-        );
+        const result = await organizerBadgeQueries.getTopEarnersEnriched(db, 1);
 
         expect(result).toHaveLength(1);
         expect(result[0].username).toBe("alice");
       });
 
       it("should sort by badge count descending", async () => {
-        const result = await contributorBadgeQueries.getTopEarnersEnriched(db);
+        const result = await organizerBadgeQueries.getTopEarnersEnriched(db);
 
         expect(result[0].badge_count).toBeGreaterThanOrEqual(
           result[1].badge_count,

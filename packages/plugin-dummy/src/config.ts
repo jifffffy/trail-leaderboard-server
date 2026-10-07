@@ -3,12 +3,12 @@
  */
 
 export interface DummyPluginConfig {
-  contributors?: {
+  organizers?: {
     count?: number;
-    minActivitiesPerContributor?: number;
-    maxActivitiesPerContributor?: number;
+    minRacesPerOrganizer?: number;
+    maxRacesPerOrganizer?: number;
   };
-  activities?: {
+  races?: {
     daysBack?: number;
     seed?: number;
   };
@@ -16,12 +16,12 @@ export interface DummyPluginConfig {
 }
 
 export const DEFAULT_CONFIG = {
-  contributors: {
+  organizers: {
     count: 50,
-    minActivitiesPerContributor: 5,
-    maxActivitiesPerContributor: 100,
+    minRacesPerOrganizer: 5,
+    maxRacesPerOrganizer: 100,
   },
-  activities: {
+  races: {
     daysBack: 90,
     seed: undefined as number | undefined,
   },
@@ -30,13 +30,13 @@ export const DEFAULT_CONFIG = {
 
 export function mergeConfig(config?: Partial<DummyPluginConfig>) {
   return {
-    contributors: {
-      ...DEFAULT_CONFIG.contributors,
-      ...config?.contributors,
+    organizers: {
+      ...DEFAULT_CONFIG.organizers,
+      ...config?.organizers,
     },
-    activities: {
-      ...DEFAULT_CONFIG.activities,
-      ...config?.activities,
+    races: {
+      ...DEFAULT_CONFIG.races,
+      ...config?.races,
     },
     sources: config?.sources ?? DEFAULT_CONFIG.sources,
   };

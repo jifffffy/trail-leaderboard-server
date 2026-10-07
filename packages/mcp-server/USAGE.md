@@ -55,7 +55,7 @@ After saving the configuration, restart Claude Desktop for the changes to take e
 
 Once configured, you can ask Claude questions like:
 
-### Contributor Queries
+### Organizer Queries
 
 ```
 "Show me all core team members"
@@ -64,13 +64,13 @@ Once configured, you can ask Claude questions like:
 "Who joined in the last month?"
 ```
 
-### Activity Queries
+### Race Queries
 
 ```
-"What activities did john_doe complete last week?"
+"What races did john_doe complete last week?"
 "Find all pull requests merged in January 2024"
 "Show me recent code reviews"
-"Search for activities mentioning 'bug fix'"
+"Search for races mentioning 'bug fix'"
 ```
 
 ### Badge Queries
@@ -88,7 +88,7 @@ Once configured, you can ask Claude questions like:
 "What are the organization-level metrics?"
 "Show alice's aggregate statistics"
 "What's our total contribution count?"
-"Show contributor streak information"
+"Show organizer streak information"
 ```
 
 ### Timeline and Analytics
@@ -96,17 +96,17 @@ Once configured, you can ask Claude questions like:
 ```
 "Show alice's contribution pattern over the last 6 months"
 "Who opened the most pull requests this quarter?"
-"Group bob's activities by week"
-"Show active contributors in Q1 2024"
+"Group bob's races by week"
+"Show active organizers in Q1 2024"
 ```
 
 ## Tool Reference
 
-### Contributor Tools
+### Organizer Tools
 
-#### query_contributors
+#### query_organizers
 
-Get a list of contributors with optional filtering.
+Get a list of organizers with optional filtering.
 
 **Parameters:**
 
@@ -116,30 +116,30 @@ Get a list of contributors with optional filtering.
 **Example:**
 
 ```
-"Show me all contributors"
+"Show me all organizers"
 ```
 
-#### get_contributor
+#### get_organizer
 
-Get detailed information about a specific contributor.
+Get detailed information about a specific organizer.
 
 **Parameters:**
 
-- `username` (required): Contributor username
+- `username` (required): Organizer username
 
 **Example:**
 
 ```
-"Get details for contributor alice"
+"Get details for organizer alice"
 ```
 
-#### get_contributor_stats
+#### get_organizer_stats
 
-Get comprehensive statistics including activities, badges, and aggregates.
+Get comprehensive statistics including races, badges, and aggregates.
 
 **Parameters:**
 
-- `username` (required): Contributor username
+- `username` (required): Organizer username
 
 **Example:**
 
@@ -147,9 +147,9 @@ Get comprehensive statistics including activities, badges, and aggregates.
 "Show me detailed stats for alice"
 ```
 
-#### batch_get_contributors
+#### batch_get_organizers
 
-Get multiple contributors in a single request.
+Get multiple organizers in a single request.
 
 **Parameters:**
 
@@ -161,16 +161,16 @@ Get multiple contributors in a single request.
 "Get information for alice, bob, and charlie"
 ```
 
-### Activity Tools
+### Race Tools
 
-#### query_activities
+#### query_races
 
-Query activities with flexible filtering.
+Query races with flexible filtering.
 
 **Parameters:**
 
-- `contributor` (optional): Filter by username
-- `activity_type` (optional): Filter by activity definition slug
+- `organizer` (optional): Filter by username
+- `race_type` (optional): Filter by race definition slug
 - `start_date` (optional): Start date (YYYY-MM-DD)
 - `end_date` (optional): End date (YYYY-MM-DD)
 - `limit` (optional): Maximum results (1-1000)
@@ -179,20 +179,20 @@ Query activities with flexible filtering.
 **Example:**
 
 ```
-"Show activities from alice in the last week"
+"Show races from alice in the last week"
 ```
 
-#### get_activity
+#### get_race
 
-Get a specific activity by its slug.
+Get a specific race by its slug.
 
 **Parameters:**
 
-- `slug` (required): Activity slug
+- `slug` (required): Race slug
 
-#### get_activity_definitions
+#### get_race_definitions
 
-Get all activity types tracked by the system.
+Get all race types tracked by the system.
 
 **Parameters:**
 
@@ -201,27 +201,27 @@ Get all activity types tracked by the system.
 **Example:**
 
 ```
-"What types of activities are tracked?"
+"What types of races are tracked?"
 ```
 
-#### get_activity_timeline
+#### get_race_timeline
 
-Get activity timeline grouped by time period.
+Get race timeline grouped by time period.
 
 **Parameters:**
 
-- `username` (required): Contributor username
+- `username` (required): Organizer username
 - `group_by` (optional): 'day', 'week', or 'month' (default: 'day')
 
 **Example:**
 
 ```
-"Show alice's activity timeline grouped by month"
+"Show alice's race timeline grouped by month"
 ```
 
-#### search_activities
+#### search_races
 
-Search activities by title or text.
+Search races by title or text.
 
 **Parameters:**
 
@@ -231,18 +231,18 @@ Search activities by title or text.
 **Example:**
 
 ```
-"Search for activities mentioning 'authentication'"
+"Search for races mentioning 'authentication'"
 ```
 
 ### Badge Tools
 
 #### get_badges
 
-Get badge definitions or contributor badges.
+Get badge definitions or organizer badges.
 
 **Parameters:**
 
-- `username` (optional): Get badges for specific contributor
+- `username` (optional): Get badges for specific organizer
 - `badge_slug` (optional): Get specific badge definition
 
 **Example:**
@@ -268,7 +268,7 @@ Get recently awarded badges.
 
 #### get_top_badge_earners
 
-Get contributors with the most badges.
+Get organizers with the most badges.
 
 **Parameters:**
 
@@ -296,13 +296,13 @@ Get organization-level aggregate metrics.
 "Show organization-level metrics"
 ```
 
-#### get_contributor_aggregates
+#### get_organizer_aggregates
 
-Get aggregates for a specific contributor.
+Get aggregates for a specific organizer.
 
 **Parameters:**
 
-- `username` (required): Contributor username
+- `username` (required): Organizer username
 - `slugs` (optional): Filter by specific aggregate slugs
 
 **Example:**
@@ -325,9 +325,9 @@ Get available aggregate metric definitions.
 "What aggregate metrics are tracked?"
 ```
 
-#### batch_get_contributor_stats
+#### batch_get_organizer_stats
 
-Get stats for multiple contributors efficiently.
+Get stats for multiple organizers efficiently.
 
 **Parameters:**
 
@@ -345,13 +345,13 @@ Get stats for multiple contributors efficiently.
 
 ### 1. Use Batch Operations
 
-When querying multiple contributors, use batch operations instead of individual queries:
+When querying multiple organizers, use batch operations instead of individual queries:
 
 **Good:**
 
 ```
 "Get stats for alice, bob, and charlie"
-→ Uses batch_get_contributors or batch_get_contributor_stats
+→ Uses batch_get_organizers or batch_get_organizer_stats
 ```
 
 **Less Efficient:**
@@ -370,13 +370,13 @@ For time-based queries, always specify date ranges for better performance:
 **Good:**
 
 ```
-"Show activities from last week" (implies date range)
+"Show races from last week" (implies date range)
 ```
 
 **Less Efficient:**
 
 ```
-"Show all activities" (queries entire database)
+"Show all races" (queries entire database)
 ```
 
 ### 3. Use Pagination
@@ -384,8 +384,8 @@ For time-based queries, always specify date ranges for better performance:
 For large result sets, use pagination:
 
 ```
-"Show first 50 contributors"
-"Show next 50 contributors (offset 50)"
+"Show first 50 organizers"
+"Show next 50 organizers (offset 50)"
 ```
 
 ### 4. Filter Early
@@ -393,7 +393,7 @@ For large result sets, use pagination:
 Apply filters to reduce result size:
 
 ```
-"Show the top 10 contributors this month"
+"Show the top 10 organizers this month"
 ```
 
 ### 5. Use Specific Queries
@@ -404,14 +404,14 @@ Use the most specific tool for your needs:
 
 ```
 "What's alice's ranking?"
-→ Uses get_contributor_ranking (optimized)
+→ Uses get_organizer_ranking (optimized)
 ```
 
 **Less Efficient:**
 
 ```
-"Get the full contributor list and find alice"
-→ Queries the entire contributor set
+"Get the full organizer list and find alice"
+→ Queries the entire organizer set
 ```
 
 ## Troubleshooting
@@ -433,7 +433,7 @@ Use the most specific tool for your needs:
 1. Verify database has data
 2. Check date range filters aren't too restrictive
 3. Try querying without filters first
-4. Check contributor/activity exists
+4. Check organizer/race exists
 
 ### Problem: Performance issues
 

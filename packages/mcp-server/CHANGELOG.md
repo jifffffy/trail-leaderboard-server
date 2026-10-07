@@ -29,11 +29,11 @@
 - Initial implementation of Leaderboard MCP Server
 - Support for both STDIO and HTTP transports
 - 20+ query tools for comprehensive leaderboard data access
-- Contributor query tools (query, get, stats, batch operations)
-- Activity query tools (query, search, timeline, definitions)
-- Leaderboard tools (rankings, top contributors by activity)
+- Organizer query tools (query, get, stats, batch operations)
+- Race query tools (query, search, timeline, definitions)
+- Leaderboard tools (rankings, top organizers by race)
 - Badge tools (definitions, recent awards, top earners)
-- Aggregate tools (global and contributor-level metrics)
+- Aggregate tools (global and organizer-level metrics)
 - Batch operation support for efficient multi-query requests
 - Input validation using Zod schemas
 - Comprehensive error handling

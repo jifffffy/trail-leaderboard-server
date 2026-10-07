@@ -1,14 +1,14 @@
 import type { Database } from "@starter/leaderboard-api";
 import {
-  activityDefinitionQueries,
-  activityQueries,
   badgeDefinitionQueries,
-  contributorAggregateDefinitionQueries,
-  contributorAggregateQueries,
-  contributorBadgeQueries,
-  contributorQueries,
   createDatabase,
   initializeSchema,
+  organizerAggregateDefinitionQueries,
+  organizerAggregateQueries,
+  organizerBadgeQueries,
+  organizerQueries,
+  raceDefinitionQueries,
+  raceQueries,
 } from "@starter/leaderboard-api";
 import { beforeEach, describe, expect, it } from "vitest";
 import { evaluateBadgeRules } from "../../rules/evaluator";
@@ -28,7 +28,7 @@ describe("Badge Rule Evaluator", () => {
     await initializeSchema(db);
 
     // Set up test data
-    await contributorQueries.upsert(db, {
+    await organizerQueries.upsert(db, {
       username: "test_user",
       name: "Test User",
       joining_date: "2025-01-01",
@@ -38,8 +38,8 @@ describe("Badge Rule Evaluator", () => {
       meta: null,
     });
 
-    // Add activity definitions
-    await activityDefinitionQueries.insertOrIgnore(db, {
+    // Add race definitions
+    await raceDefinitionQueries.insertOrIgnore(db, {
       slug: "pull_request_opened",
       name: "PR Opened",
       description: "Opened a pull request",
@@ -47,7 +47,7 @@ describe("Badge Rule Evaluator", () => {
       points: 10,
     });
 
-    await activityDefinitionQueries.insertOrIgnore(db, {
+    await raceDefinitionQueries.insertOrIgnore(db, {
       slug: "pull_request_merged",
       name: "PR Merged",
       description: "Merged a pull request",
@@ -55,7 +55,7 @@ describe("Badge Rule Evaluator", () => {
       points: 20,
     });
 
-    await activityDefinitionQueries.insertOrIgnore(db, {
+    await raceDefinitionQueries.insertOrIgnore(db, {
       slug: "issue_created",
       name: "Issue Created",
       description: "Created an issue",
@@ -63,7 +63,7 @@ describe("Badge Rule Evaluator", () => {
       points: 5,
     });
 
-    await activityDefinitionQueries.insertOrIgnore(db, {
+    await raceDefinitionQueries.insertOrIgnore(db, {
       slug: "pull_request_reviewed",
       name: "PR Reviewed",
       description: "Reviewed a pull request",
@@ -75,38 +75,38 @@ describe("Badge Rule Evaluator", () => {
   describe("Threshold Rules", () => {
     it("should award badges based on aggregate thresholds", async () => {
       // Set up aggregate definition
-      await contributorAggregateDefinitionQueries.upsert(db, {
-        slug: "activity_count",
-        name: "Activity Count",
-        description: "Total number of activities",
+      await organizerAggregateDefinitionQueries.upsert(db, {
+        slug: "race_count",
+        name: "Race Count",
+        description: "Total number of races",
       });
 
       // Set up aggregate value
-      await contributorAggregateQueries.upsert(db, {
-        aggregate: "activity_count",
-        contributor: "test_user",
+      await organizerAggregateQueries.upsert(db, {
+        aggregate: "race_count",
+        organizer: "test_user",
         value: { type: "number", value: 50 },
         meta: null,
       });
 
       // Set up badge definition
       await badgeDefinitionQueries.upsert(db, {
-        slug: "activity_milestone",
-        name: "Activity Milestone",
-        description: "Awarded for reaching activity milestones",
+        slug: "race_milestone",
+        name: "Race Milestone",
+        description: "Awarded for reaching race milestones",
         variants: {
           bronze: {
-            description: "10 activities",
+            description: "10 races",
             svg_url: "/bronze.svg",
             order: 1,
           },
           silver: {
-            description: "50 activities",
+            description: "50 races",
             svg_url: "/silver.svg",
             order: 2,
           },
           gold: {
-            description: "100 activities",
+            description: "100 races",
             svg_url: "/gold.svg",
             order: 3,
           },
@@ -117,9 +117,9 @@ describe("Badge Rule Evaluator", () => {
       const rules: BadgeRuleDefinition[] = [
         {
           type: "threshold",
-          badgeSlug: "activity_milestone",
+          badgeSlug: "race_milestone",
           enabled: true,
-          aggregateSlug: "activity_count",
+          aggregateSlug: "race_count",
           thresholds: [
             { variant: "bronze", value: 10 },
             { variant: "silver", value: 50 },
@@ -131,7 +131,7 @@ describe("Badge Rule Evaluator", () => {
       await evaluateBadgeRules(db, mockLogger, rules);
 
       // Check that both bronze and silver badges were awarded
-      const badges = await contributorBadgeQueries.getByContributor(
+      const badges = await organizerBadgeQueries.getByOrganizer(
         db,
         "test_user",
       );
@@ -142,36 +142,36 @@ describe("Badge Rule Evaluator", () => {
 
     it("should award all eligible variants up to the highest", async () => {
       // Set up with high value
-      await contributorAggregateDefinitionQueries.upsert(db, {
-        slug: "activity_count",
-        name: "Activity Count",
-        description: "Total number of activities",
+      await organizerAggregateDefinitionQueries.upsert(db, {
+        slug: "race_count",
+        name: "Race Count",
+        description: "Total number of races",
       });
 
-      await contributorAggregateQueries.upsert(db, {
-        aggregate: "activity_count",
-        contributor: "test_user",
+      await organizerAggregateQueries.upsert(db, {
+        aggregate: "race_count",
+        organizer: "test_user",
         value: { type: "number", value: 150 },
         meta: null,
       });
 
       await badgeDefinitionQueries.upsert(db, {
-        slug: "activity_milestone",
-        name: "Activity Milestone",
-        description: "Awarded for reaching activity milestones",
+        slug: "race_milestone",
+        name: "Race Milestone",
+        description: "Awarded for reaching race milestones",
         variants: {
           bronze: {
-            description: "10 activities",
+            description: "10 races",
             svg_url: "/bronze.svg",
             order: 1,
           },
           silver: {
-            description: "50 activities",
+            description: "50 races",
             svg_url: "/silver.svg",
             order: 2,
           },
           gold: {
-            description: "100 activities",
+            description: "100 races",
             svg_url: "/gold.svg",
             order: 3,
           },
@@ -181,9 +181,9 @@ describe("Badge Rule Evaluator", () => {
       const rules: BadgeRuleDefinition[] = [
         {
           type: "threshold",
-          badgeSlug: "activity_milestone",
+          badgeSlug: "race_milestone",
           enabled: true,
-          aggregateSlug: "activity_count",
+          aggregateSlug: "race_count",
           thresholds: [
             { variant: "bronze", value: 10 },
             { variant: "silver", value: 50 },
@@ -194,7 +194,7 @@ describe("Badge Rule Evaluator", () => {
 
       await evaluateBadgeRules(db, mockLogger, rules);
 
-      const badges = await contributorBadgeQueries.getByContributor(
+      const badges = await organizerBadgeQueries.getByOrganizer(
         db,
         "test_user",
       );
@@ -203,14 +203,14 @@ describe("Badge Rule Evaluator", () => {
       expect(variants).toEqual(["bronze", "gold", "silver"]);
     });
 
-    it("should set achieved_on to the date of the Nth activity for activity_count thresholds", async () => {
-      // Create 15 activities with specific dates
+    it("should set achieved_on to the date of the Nth race for race_count thresholds", async () => {
+      // Create 15 races with specific dates
       for (let i = 0; i < 15; i++) {
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: `act_${i}`,
-          contributor: "test_user",
-          activity_definition: "pull_request_opened",
-          title: `Activity ${i}`,
+          organizer: "test_user",
+          race_definition: "pull_request_opened",
+          title: `Race ${i}`,
           occurred_at: `2025-01-${String(i + 1).padStart(2, "0")}`,
           link: null,
           text: null,
@@ -219,22 +219,22 @@ describe("Badge Rule Evaluator", () => {
         });
       }
 
-      await contributorAggregateDefinitionQueries.upsert(db, {
-        slug: "activity_count",
-        name: "Activity Count",
-        description: "Total number of activities",
+      await organizerAggregateDefinitionQueries.upsert(db, {
+        slug: "race_count",
+        name: "Race Count",
+        description: "Total number of races",
       });
 
-      await contributorAggregateQueries.upsert(db, {
-        aggregate: "activity_count",
-        contributor: "test_user",
+      await organizerAggregateQueries.upsert(db, {
+        aggregate: "race_count",
+        organizer: "test_user",
         value: { type: "number", value: 15 },
         meta: null,
       });
 
       await badgeDefinitionQueries.upsert(db, {
-        slug: "activity_milestone",
-        name: "Activity Milestone",
+        slug: "race_milestone",
+        name: "Race Milestone",
         description: "milestone",
         variants: {
           bronze: { description: "10", svg_url: "/b.svg", order: 1 },
@@ -244,31 +244,31 @@ describe("Badge Rule Evaluator", () => {
       const rules: BadgeRuleDefinition[] = [
         {
           type: "threshold",
-          badgeSlug: "activity_milestone",
+          badgeSlug: "race_milestone",
           enabled: true,
-          aggregateSlug: "activity_count",
+          aggregateSlug: "race_count",
           thresholds: [{ variant: "bronze", value: 10 }],
         },
       ];
 
       await evaluateBadgeRules(db, mockLogger, rules);
 
-      const badges = await contributorBadgeQueries.getByContributor(
+      const badges = await organizerBadgeQueries.getByOrganizer(
         db,
         "test_user",
       );
       expect(badges).toHaveLength(1);
-      // The 10th activity (0-indexed: 9) has date 2025-01-10
+      // The 10th race (0-indexed: 9) has date 2025-01-10
       expect(badges[0].achieved_on).toBe("2025-01-10");
     });
 
-    it("should set achieved_on to the date of the Nth activity for per-definition activity_count thresholds", async () => {
-      // Create mixed activities: PRs on odd days, issues on even days
+    it("should set achieved_on to the date of the Nth race for per-definition race_count thresholds", async () => {
+      // Create mixed races: PRs on odd days, issues on even days
       for (let i = 0; i < 10; i++) {
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: `pr_${i}`,
-          contributor: "test_user",
-          activity_definition: "pull_request_opened",
+          organizer: "test_user",
+          race_definition: "pull_request_opened",
           title: `PR ${i}`,
           occurred_at: `2025-02-${String(i * 2 + 1).padStart(2, "0")}`,
           link: null,
@@ -278,10 +278,10 @@ describe("Badge Rule Evaluator", () => {
         });
       }
       for (let i = 0; i < 5; i++) {
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: `issue_${i}`,
-          contributor: "test_user",
-          activity_definition: "issue_created",
+          organizer: "test_user",
+          race_definition: "issue_created",
           title: `Issue ${i}`,
           occurred_at: `2025-02-${String(i * 2 + 2).padStart(2, "0")}`,
           link: null,
@@ -291,15 +291,15 @@ describe("Badge Rule Evaluator", () => {
         });
       }
 
-      await contributorAggregateDefinitionQueries.upsert(db, {
-        slug: "activity_count:pull_request_opened",
+      await organizerAggregateDefinitionQueries.upsert(db, {
+        slug: "race_count:pull_request_opened",
         name: "PR Count",
-        description: "PR activities",
+        description: "PR races",
       });
 
-      await contributorAggregateQueries.upsert(db, {
-        aggregate: "activity_count:pull_request_opened",
-        contributor: "test_user",
+      await organizerAggregateQueries.upsert(db, {
+        aggregate: "race_count:pull_request_opened",
+        organizer: "test_user",
         value: { type: "number", value: 10 },
         meta: null,
       });
@@ -318,14 +318,14 @@ describe("Badge Rule Evaluator", () => {
           type: "threshold",
           badgeSlug: "pr_milestone",
           enabled: true,
-          aggregateSlug: "activity_count:pull_request_opened",
+          aggregateSlug: "race_count:pull_request_opened",
           thresholds: [{ variant: "bronze", value: 5 }],
         },
       ];
 
       await evaluateBadgeRules(db, mockLogger, rules);
 
-      const badges = await contributorBadgeQueries.getByContributor(
+      const badges = await organizerBadgeQueries.getByOrganizer(
         db,
         "test_user",
       );
@@ -334,12 +334,12 @@ describe("Badge Rule Evaluator", () => {
       expect(badges[0].achieved_on).toBe("2025-02-09");
     });
 
-    it("should set achieved_on based on cumulative points for total_activity_points thresholds", async () => {
-      // Create activities with varying points
-      await activityQueries.upsert(db, {
+    it("should set achieved_on based on cumulative points for total_race_points thresholds", async () => {
+      // Create races with varying points
+      await raceQueries.upsert(db, {
         slug: "act_a",
-        contributor: "test_user",
-        activity_definition: "pull_request_opened",
+        organizer: "test_user",
+        race_definition: "pull_request_opened",
         title: "A",
         occurred_at: "2025-03-01",
         link: null,
@@ -347,10 +347,10 @@ describe("Badge Rule Evaluator", () => {
         points: 30,
         meta: null,
       });
-      await activityQueries.upsert(db, {
+      await raceQueries.upsert(db, {
         slug: "act_b",
-        contributor: "test_user",
-        activity_definition: "pull_request_merged",
+        organizer: "test_user",
+        race_definition: "pull_request_merged",
         title: "B",
         occurred_at: "2025-03-05",
         link: null,
@@ -358,10 +358,10 @@ describe("Badge Rule Evaluator", () => {
         points: 40,
         meta: null,
       });
-      await activityQueries.upsert(db, {
+      await raceQueries.upsert(db, {
         slug: "act_c",
-        contributor: "test_user",
-        activity_definition: "pull_request_opened",
+        organizer: "test_user",
+        race_definition: "pull_request_opened",
         title: "C",
         occurred_at: "2025-03-10",
         link: null,
@@ -370,15 +370,15 @@ describe("Badge Rule Evaluator", () => {
         meta: null,
       });
 
-      await contributorAggregateDefinitionQueries.upsert(db, {
-        slug: "total_activity_points",
+      await organizerAggregateDefinitionQueries.upsert(db, {
+        slug: "total_race_points",
         name: "Total Points",
-        description: "Total activity points",
+        description: "Total race points",
       });
 
-      await contributorAggregateQueries.upsert(db, {
-        aggregate: "total_activity_points",
-        contributor: "test_user",
+      await organizerAggregateQueries.upsert(db, {
+        aggregate: "total_race_points",
+        organizer: "test_user",
         value: { type: "number", value: 120 },
         meta: null,
       });
@@ -397,14 +397,14 @@ describe("Badge Rule Evaluator", () => {
           type: "threshold",
           badgeSlug: "points_milestone",
           enabled: true,
-          aggregateSlug: "total_activity_points",
+          aggregateSlug: "total_race_points",
           thresholds: [{ variant: "bronze", value: 50 }],
         },
       ];
 
       await evaluateBadgeRules(db, mockLogger, rules);
 
-      const badges = await contributorBadgeQueries.getByContributor(
+      const badges = await organizerBadgeQueries.getByOrganizer(
         db,
         "test_user",
       );
@@ -414,15 +414,15 @@ describe("Badge Rule Evaluator", () => {
     });
 
     it("should fall back to current date for unknown aggregate slugs", async () => {
-      await contributorAggregateDefinitionQueries.upsert(db, {
+      await organizerAggregateDefinitionQueries.upsert(db, {
         slug: "custom_metric",
         name: "Custom Metric",
         description: "Some custom metric",
       });
 
-      await contributorAggregateQueries.upsert(db, {
+      await organizerAggregateQueries.upsert(db, {
         aggregate: "custom_metric",
-        contributor: "test_user",
+        organizer: "test_user",
         value: { type: "number", value: 100 },
         meta: null,
       });
@@ -448,7 +448,7 @@ describe("Badge Rule Evaluator", () => {
 
       await evaluateBadgeRules(db, mockLogger, rules);
 
-      const badges = await contributorBadgeQueries.getByContributor(
+      const badges = await organizerBadgeQueries.getByOrganizer(
         db,
         "test_user",
       );
@@ -461,18 +461,18 @@ describe("Badge Rule Evaluator", () => {
   });
 
   describe("Streak Rules", () => {
-    it("should calculate streak across all activities when no filter", async () => {
-      // Add consecutive daily activities
+    it("should calculate streak across all races when no filter", async () => {
+      // Add consecutive daily races
       const today = new Date();
       for (let i = 0; i < 10; i++) {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
-        await activityQueries.upsert(db, {
-          slug: `activity_${i}`,
-          contributor: "test_user",
-          activity_definition:
+        await raceQueries.upsert(db, {
+          slug: `race_${i}`,
+          organizer: "test_user",
+          race_definition:
             i % 2 === 0 ? "pull_request_opened" : "issue_created",
-          title: `Activity ${i}`,
+          title: `Race ${i}`,
           occurred_at: date.toISOString().split("T")[0],
           link: null,
           text: null,
@@ -484,7 +484,7 @@ describe("Badge Rule Evaluator", () => {
       await badgeDefinitionQueries.upsert(db, {
         slug: "consistency_champion",
         name: "Consistency Champion",
-        description: "Awarded for maintaining an activity streak",
+        description: "Awarded for maintaining an race streak",
         variants: {
           bronze: {
             description: "7 day streak",
@@ -520,7 +520,7 @@ describe("Badge Rule Evaluator", () => {
 
       await evaluateBadgeRules(db, mockLogger, rules);
 
-      const badges = await contributorBadgeQueries.getByContributor(
+      const badges = await organizerBadgeQueries.getByOrganizer(
         db,
         "test_user",
       );
@@ -530,13 +530,13 @@ describe("Badge Rule Evaluator", () => {
     });
 
     it("should set achieved_on to streak end date", async () => {
-      // Add 10 consecutive daily activities starting from a fixed past date
+      // Add 10 consecutive daily races starting from a fixed past date
       for (let i = 0; i < 10; i++) {
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: `streak_act_${i}`,
-          contributor: "test_user",
-          activity_definition: "pull_request_opened",
-          title: `Activity ${i}`,
+          organizer: "test_user",
+          race_definition: "pull_request_opened",
+          title: `Race ${i}`,
           occurred_at: `2025-03-${String(i + 1).padStart(2, "0")}`,
           link: null,
           text: null,
@@ -566,7 +566,7 @@ describe("Badge Rule Evaluator", () => {
 
       await evaluateBadgeRules(db, mockLogger, rules);
 
-      const badges = await contributorBadgeQueries.getByContributor(
+      const badges = await organizerBadgeQueries.getByOrganizer(
         db,
         "test_user",
       );
@@ -576,18 +576,18 @@ describe("Badge Rule Evaluator", () => {
       expect(badges[0].achieved_on).toBe("2025-03-07");
     });
 
-    it("should filter activities by regex pattern", async () => {
-      // Add mixed activities
+    it("should filter races by regex pattern", async () => {
+      // Add mixed races
       const today = new Date();
       for (let i = 0; i < 10; i++) {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
-        await activityQueries.upsert(db, {
-          slug: `activity_${i}`,
-          contributor: "test_user",
-          activity_definition:
+        await raceQueries.upsert(db, {
+          slug: `race_${i}`,
+          organizer: "test_user",
+          race_definition:
             i % 3 === 0 ? "pull_request_opened" : "issue_created",
-          title: `Activity ${i}`,
+          title: `Race ${i}`,
           occurred_at: date.toISOString().split("T")[0],
           link: null,
           text: null,
@@ -599,7 +599,7 @@ describe("Badge Rule Evaluator", () => {
       await badgeDefinitionQueries.upsert(db, {
         slug: "pr_consistency",
         name: "PR Consistency",
-        description: "Streak of PR activities",
+        description: "Streak of PR races",
         variants: {
           bronze: {
             description: "5 day PR streak",
@@ -615,39 +615,39 @@ describe("Badge Rule Evaluator", () => {
           badgeSlug: "pr_consistency",
           enabled: true,
           streakType: "daily",
-          activityDefinitions: ["pull_request_.*"], // Only PR activities
+          raceDefinitions: ["pull_request_.*"], // Only PR races
           thresholds: [{ variant: "bronze", days: 2 }],
         },
       ];
 
       await evaluateBadgeRules(db, mockLogger, rules);
 
-      const badges = await contributorBadgeQueries.getByContributor(
+      const badges = await organizerBadgeQueries.getByOrganizer(
         db,
         "test_user",
       );
-      // PR activities are on days 0, 3, 6, 9 - not consecutive
+      // PR races are on days 0, 3, 6, 9 - not consecutive
       // So either no badge or bronze if we have at least 2
       expect(badges.length).toBeGreaterThanOrEqual(0);
     });
 
     it("should handle multiple regex patterns", async () => {
-      // Add mixed activities
+      // Add mixed races
       const today = new Date();
       for (let i = 0; i < 10; i++) {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
-        const activityType =
+        const raceType =
           i % 3 === 0
             ? "pull_request_opened"
             : i % 3 === 1
               ? "pull_request_reviewed"
               : "issue_created";
-        await activityQueries.upsert(db, {
-          slug: `activity_${i}`,
-          contributor: "test_user",
-          activity_definition: activityType,
-          title: `Activity ${i}`,
+        await raceQueries.upsert(db, {
+          slug: `race_${i}`,
+          organizer: "test_user",
+          race_definition: raceType,
+          title: `Race ${i}`,
           occurred_at: date.toISOString().split("T")[0],
           link: null,
           text: null,
@@ -659,10 +659,10 @@ describe("Badge Rule Evaluator", () => {
       await badgeDefinitionQueries.upsert(db, {
         slug: "pr_expert",
         name: "PR Expert",
-        description: "PR related activities",
+        description: "PR related races",
         variants: {
           bronze: {
-            description: "PR activities",
+            description: "PR races",
             svg_url: "/bronze.svg",
             order: 1,
           },
@@ -675,14 +675,14 @@ describe("Badge Rule Evaluator", () => {
           badgeSlug: "pr_expert",
           enabled: true,
           streakType: "daily",
-          activityDefinitions: ["pull_request_.*"], // Match all PR activities
+          raceDefinitions: ["pull_request_.*"], // Match all PR races
           thresholds: [{ variant: "bronze", days: 5 }],
         },
       ];
 
       await evaluateBadgeRules(db, mockLogger, rules);
 
-      const badges = await contributorBadgeQueries.getByContributor(
+      const badges = await organizerBadgeQueries.getByOrganizer(
         db,
         "test_user",
       );
@@ -690,15 +690,15 @@ describe("Badge Rule Evaluator", () => {
     });
 
     it("should handle exact matches", async () => {
-      // Add specific activity type
+      // Add specific race type
       const today = new Date();
       for (let i = 0; i < 7; i++) {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
-        await activityQueries.upsert(db, {
-          slug: `activity_${i}`,
-          contributor: "test_user",
-          activity_definition: "pull_request_reviewed",
+        await raceQueries.upsert(db, {
+          slug: `race_${i}`,
+          organizer: "test_user",
+          race_definition: "pull_request_reviewed",
           title: `Review ${i}`,
           occurred_at: date.toISOString().split("T")[0],
           link: null,
@@ -727,14 +727,14 @@ describe("Badge Rule Evaluator", () => {
           badgeSlug: "review_champion",
           enabled: true,
           streakType: "daily",
-          activityDefinitions: ["pull_request_reviewed"], // Exact match
+          raceDefinitions: ["pull_request_reviewed"], // Exact match
           thresholds: [{ variant: "bronze", days: 5 }],
         },
       ];
 
       await evaluateBadgeRules(db, mockLogger, rules);
 
-      const badges = await contributorBadgeQueries.getByContributor(
+      const badges = await organizerBadgeQueries.getByOrganizer(
         db,
         "test_user",
       );
@@ -746,39 +746,39 @@ describe("Badge Rule Evaluator", () => {
   describe("Composite Rules", () => {
     it("should evaluate AND conditions", async () => {
       // Set up multiple aggregates
-      await contributorAggregateDefinitionQueries.upsert(db, {
-        slug: "activity_count",
-        name: "Activity Count",
-        description: "Total activities",
+      await organizerAggregateDefinitionQueries.upsert(db, {
+        slug: "race_count",
+        name: "Race Count",
+        description: "Total races",
       });
 
-      await contributorAggregateDefinitionQueries.upsert(db, {
+      await organizerAggregateDefinitionQueries.upsert(db, {
         slug: "total_points",
         name: "Total Points",
         description: "Total points earned",
       });
 
-      await contributorAggregateQueries.upsert(db, {
-        aggregate: "activity_count",
-        contributor: "test_user",
+      await organizerAggregateQueries.upsert(db, {
+        aggregate: "race_count",
+        organizer: "test_user",
         value: { type: "number", value: 100 },
         meta: null,
       });
 
-      await contributorAggregateQueries.upsert(db, {
+      await organizerAggregateQueries.upsert(db, {
         aggregate: "total_points",
-        contributor: "test_user",
+        organizer: "test_user",
         value: { type: "number", value: 1000 },
         meta: null,
       });
 
       await badgeDefinitionQueries.upsert(db, {
-        slug: "super_contributor",
-        name: "Super Contributor",
-        description: "Both high activity and points",
+        slug: "super_organizer",
+        name: "Super Organizer",
+        description: "Both high race and points",
         variants: {
           gold: {
-            description: "Super contributor",
+            description: "Super organizer",
             svg_url: "/gold.svg",
             order: 1,
           },
@@ -788,12 +788,12 @@ describe("Badge Rule Evaluator", () => {
       const rules: BadgeRuleDefinition[] = [
         {
           type: "composite",
-          badgeSlug: "super_contributor",
+          badgeSlug: "super_organizer",
           enabled: true,
           operator: "AND",
           variant: "gold",
           conditions: [
-            { aggregateSlug: "activity_count", operator: ">=", value: 50 },
+            { aggregateSlug: "race_count", operator: ">=", value: 50 },
             { aggregateSlug: "total_points", operator: ">=", value: 500 },
           ],
         },
@@ -801,12 +801,12 @@ describe("Badge Rule Evaluator", () => {
 
       await evaluateBadgeRules(db, mockLogger, rules);
 
-      const badges = await contributorBadgeQueries.getByContributor(
+      const badges = await organizerBadgeQueries.getByOrganizer(
         db,
         "test_user",
       );
       expect(badges).toHaveLength(1);
-      expect(badges[0].badge).toBe("super_contributor");
+      expect(badges[0].badge).toBe("super_organizer");
       // Composite rules fall back to current date
       expect(badges[0].achieved_on).toBe(
         new Date().toISOString().split("T")[0],
@@ -816,13 +816,13 @@ describe("Badge Rule Evaluator", () => {
 
   describe("Badge Multi-variant Awards", () => {
     it("should award all lower variants when upgrading aggregate value", async () => {
-      // Create 150 activities with specific dates
+      // Create 150 races with specific dates
       for (let i = 0; i < 150; i++) {
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: `upgrade_act_${i}`,
-          contributor: "test_user",
-          activity_definition: "pull_request_opened",
-          title: `Activity ${i}`,
+          organizer: "test_user",
+          race_definition: "pull_request_opened",
+          title: `Race ${i}`,
           occurred_at: `2025-${String(Math.floor(i / 28) + 1).padStart(2, "0")}-${String((i % 28) + 1).padStart(2, "0")}`,
           link: null,
           text: null,
@@ -831,15 +831,15 @@ describe("Badge Rule Evaluator", () => {
         });
       }
 
-      await contributorAggregateDefinitionQueries.upsert(db, {
-        slug: "activity_count",
-        name: "Activity Count",
-        description: "Total activities",
+      await organizerAggregateDefinitionQueries.upsert(db, {
+        slug: "race_count",
+        name: "Race Count",
+        description: "Total races",
       });
 
       await badgeDefinitionQueries.upsert(db, {
-        slug: "activity_milestone",
-        name: "Activity Milestone",
+        slug: "race_milestone",
+        name: "Race Milestone",
         description: "milestone",
         variants: {
           bronze: { description: "10", svg_url: "/b.svg", order: 1 },
@@ -851,9 +851,9 @@ describe("Badge Rule Evaluator", () => {
       const rules: BadgeRuleDefinition[] = [
         {
           type: "threshold",
-          badgeSlug: "activity_milestone",
+          badgeSlug: "race_milestone",
           enabled: true,
-          aggregateSlug: "activity_count",
+          aggregateSlug: "race_count",
           thresholds: [
             { variant: "bronze", value: 10 },
             { variant: "silver", value: 50 },
@@ -863,16 +863,16 @@ describe("Badge Rule Evaluator", () => {
       ];
 
       // Set aggregate to 150 (qualifies for all three)
-      await contributorAggregateQueries.upsert(db, {
-        aggregate: "activity_count",
-        contributor: "test_user",
+      await organizerAggregateQueries.upsert(db, {
+        aggregate: "race_count",
+        organizer: "test_user",
         value: { type: "number", value: 150 },
         meta: null,
       });
 
       await evaluateBadgeRules(db, mockLogger, rules);
 
-      const badges = await contributorBadgeQueries.getByContributor(
+      const badges = await organizerBadgeQueries.getByOrganizer(
         db,
         "test_user",
       );
@@ -881,21 +881,21 @@ describe("Badge Rule Evaluator", () => {
       const badgeMap = new Map(badges.map((b) => [b.variant, b]));
 
       // Each variant should have the correct achieved_on date
-      // 10th activity: index 9 → 2025-01-10
+      // 10th race: index 9 → 2025-01-10
       expect(badgeMap.get("bronze")?.achieved_on).toBe("2025-01-10");
-      // 50th activity: index 49 → month 2 (49/28=1.75→floor=1→+1=2), day (49%28)+1=22
+      // 50th race: index 49 → month 2 (49/28=1.75→floor=1→+1=2), day (49%28)+1=22
       expect(badgeMap.get("silver")?.achieved_on).toBe("2025-02-22");
-      // 100th activity: index 99 → month 4 (99/28=3.5→floor=3→+1=4), day (99%28)+1=16
+      // 100th race: index 99 → month 4 (99/28=3.5→floor=3→+1=4), day (99%28)+1=16
       expect(badgeMap.get("gold")?.achieved_on).toBe("2025-04-16");
     });
 
     it("should not re-award existing variants on re-evaluation", async () => {
       for (let i = 0; i < 150; i++) {
-        await activityQueries.upsert(db, {
+        await raceQueries.upsert(db, {
           slug: `reeval_act_${i}`,
-          contributor: "test_user",
-          activity_definition: "pull_request_opened",
-          title: `Activity ${i}`,
+          organizer: "test_user",
+          race_definition: "pull_request_opened",
+          title: `Race ${i}`,
           occurred_at: `2025-${String(Math.floor(i / 28) + 1).padStart(2, "0")}-${String((i % 28) + 1).padStart(2, "0")}`,
           link: null,
           text: null,
@@ -904,22 +904,22 @@ describe("Badge Rule Evaluator", () => {
         });
       }
 
-      await contributorAggregateDefinitionQueries.upsert(db, {
-        slug: "activity_count",
-        name: "Activity Count",
-        description: "Total activities",
+      await organizerAggregateDefinitionQueries.upsert(db, {
+        slug: "race_count",
+        name: "Race Count",
+        description: "Total races",
       });
 
-      await contributorAggregateQueries.upsert(db, {
-        aggregate: "activity_count",
-        contributor: "test_user",
+      await organizerAggregateQueries.upsert(db, {
+        aggregate: "race_count",
+        organizer: "test_user",
         value: { type: "number", value: 150 },
         meta: null,
       });
 
       await badgeDefinitionQueries.upsert(db, {
-        slug: "activity_milestone",
-        name: "Activity Milestone",
+        slug: "race_milestone",
+        name: "Race Milestone",
         description: "milestone",
         variants: {
           bronze: { description: "10", svg_url: "/b.svg", order: 1 },
@@ -931,9 +931,9 @@ describe("Badge Rule Evaluator", () => {
       const rules: BadgeRuleDefinition[] = [
         {
           type: "threshold",
-          badgeSlug: "activity_milestone",
+          badgeSlug: "race_milestone",
           enabled: true,
-          aggregateSlug: "activity_count",
+          aggregateSlug: "race_count",
           thresholds: [
             { variant: "bronze", value: 10 },
             { variant: "silver", value: 50 },
@@ -946,7 +946,7 @@ describe("Badge Rule Evaluator", () => {
       await evaluateBadgeRules(db, mockLogger, rules);
       await evaluateBadgeRules(db, mockLogger, rules);
 
-      const badges = await contributorBadgeQueries.getByContributor(
+      const badges = await organizerBadgeQueries.getByOrganizer(
         db,
         "test_user",
       );

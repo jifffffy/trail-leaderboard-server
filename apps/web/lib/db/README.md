@@ -8,15 +8,15 @@ The database client reads from the persisted `.leaderboard.db` file in the data-
 
 ```typescript
 import { getDatabase } from "@/lib/db/client";
-import { contributorQueries } from "@starter/leaderboard-api";
+import { organizerQueries } from "@starter/leaderboard-api";
 
 // In a Next.js page or component during SSG
 export async function generateStaticParams() {
   const db = getDatabase();
-  const contributors = await contributorQueries.getAll(db);
+  const organizers = await organizerQueries.getAll(db);
 
-  return contributors.map((contributor) => ({
-    username: contributor.username,
+  return organizers.map((organizer) => ({
+    username: organizer.username,
   }));
 }
 ```
@@ -26,15 +26,15 @@ export async function generateStaticParams() {
 For convenience, use the data loading utilities from `@/lib/data/loader`:
 
 ```typescript
-import { getAllContributors, getActivities } from "@/lib/data/loader";
+import { getAllOrganizers, getRaces } from "@/lib/data/loader";
 
-export default async function ContributorsPage() {
-  const contributors = await getAllContributors();
-  const activities = await getActivities({ limit: 10 });
+export default async function OrganizersPage() {
+  const organizers = await getAllOrganizers();
+  const races = await getRaces({ limit: 10 });
 
   return (
     <div>
-      {/* Render contributors and recent activities */}
+      {/* Render organizers and recent races */}
     </div>
   );
 }

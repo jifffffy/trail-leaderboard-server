@@ -5,7 +5,7 @@
 import type { Database, Logger } from "@starter/leaderboard-api";
 import {
   badgeDefinitionQueries,
-  contributorBadgeQueries,
+  organizerBadgeQueries,
 } from "@starter/leaderboard-api";
 import { readFile, readdir } from "fs/promises";
 import { join } from "path";
@@ -44,30 +44,30 @@ export async function importBadgeDefinitions(
 }
 
 /**
- * Import contributor badges from badges/contributors/*.jsonl
+ * Import organizer badges from badges/organizers/*.jsonl
  */
-export async function importContributorBadges(
+export async function importOrganizerBadges(
   db: Database,
   dataDir: string,
   logger: Logger,
 ): Promise<void> {
-  const contributorsDir = join(dataDir, "badges", "contributors");
+  const organizersDir = join(dataDir, "badges", "organizers");
 
   try {
-    const files = await readdir(contributorsDir);
+    const files = await readdir(organizersDir);
     const jsonlFiles = files.filter((f) => f.endsWith(".jsonl"));
 
     let totalImported = 0;
 
     for (const file of jsonlFiles) {
-      const filePath = join(contributorsDir, file);
+      const filePath = join(organizersDir, file);
       const content = await readFile(filePath, "utf-8");
       const lines = content.trim().split("\n").filter(Boolean);
 
       for (const line of lines) {
         try {
           const badge = JSON.parse(line);
-          await contributorBadgeQueries.award(db, badge);
+          await organizerBadgeQueries.award(db, badge);
           totalImported++;
         } catch (error) {
           logger.warn(`Failed to parse badge line in ${file}`, { error });
@@ -76,13 +76,13 @@ export async function importContributorBadges(
     }
 
     logger.info(
-      `Imported ${totalImported} contributor badges from ${jsonlFiles.length} files`,
+      `Imported ${totalImported} organizer badges from ${jsonlFiles.length} files`,
     );
   } catch (error: any) {
     if (error.code === "ENOENT") {
-      logger.debug("No contributor badges directory found, skipping");
+      logger.debug("No organizer badges directory found, skipping");
     } else {
-      logger.error("Failed to import contributor badges", error);
+      logger.error("Failed to import organizer badges", error);
     }
   }
 }
@@ -97,5 +97,5 @@ export async function importBadges(
 ): Promise<void> {
   logger.info("Importing badges");
   await importBadgeDefinitions(db, dataDir, logger);
-  await importContributorBadges(db, dataDir, logger);
+  await importOrganizerBadges(db, dataDir, logger);
 }

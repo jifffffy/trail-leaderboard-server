@@ -5,10 +5,10 @@
 import type { Database } from "@starter/leaderboard-api";
 import {
   badgeDefinitionQueries,
-  contributorBadgeQueries,
-  contributorQueries,
   createDatabase,
   initializeSchema,
+  organizerBadgeQueries,
+  organizerQueries,
 } from "@starter/leaderboard-api";
 import { mkdir, readdir, readFile, rm } from "fs/promises";
 import { join } from "path";
@@ -16,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   exportBadgeDefinitions,
   exportBadges,
-  exportContributorBadges,
+  exportOrganizerBadges,
 } from "../../exporters/badges";
 import { createLogger } from "../../logger";
 
@@ -40,20 +40,20 @@ describe("Badge Exporters", () => {
   describe("exportBadgeDefinitions", () => {
     it("should export badge definitions to JSON", async () => {
       await badgeDefinitionQueries.upsert(db, {
-        slug: "activity_milestone",
-        name: "Activity Milestone",
-        description: "Awarded for reaching activity milestones",
+        slug: "race_milestone",
+        name: "Race Milestone",
+        description: "Awarded for reaching race milestones",
         variants: {
           bronze: {
-            description: "10+ activities",
+            description: "10+ races",
             svg_url: "https://example.com/bronze.svg",
           },
           silver: {
-            description: "50+ activities",
+            description: "50+ races",
             svg_url: "https://example.com/silver.svg",
           },
           gold: {
-            description: "100+ activities",
+            description: "100+ races",
             svg_url: "https://example.com/gold.svg",
           },
         },
@@ -68,7 +68,7 @@ describe("Badge Exporters", () => {
       const definitions = JSON.parse(content);
 
       expect(definitions).toHaveLength(1);
-      expect(definitions[0].slug).toBe("activity_milestone");
+      expect(definitions[0].slug).toBe("race_milestone");
       expect(definitions[0].variants.bronze).toBeDefined();
       expect(definitions[0].variants.silver).toBeDefined();
       expect(definitions[0].variants.gold).toBeDefined();
@@ -113,10 +113,10 @@ describe("Badge Exporters", () => {
     });
   });
 
-  describe("exportContributorBadges", () => {
+  describe("exportOrganizerBadges", () => {
     beforeEach(async () => {
-      // Setup contributors and badge definitions
-      await contributorQueries.upsert(db, {
+      // Setup organizers and badge definitions
+      await organizerQueries.upsert(db, {
         username: "alice",
         name: "Alice",
         title: null,
@@ -126,7 +126,7 @@ describe("Badge Exporters", () => {
         meta: null,
       });
 
-      await contributorQueries.upsert(db, {
+      await organizerQueries.upsert(db, {
         username: "bob",
         name: "Bob",
         title: null,
@@ -137,8 +137,8 @@ describe("Badge Exporters", () => {
       });
 
       await badgeDefinitionQueries.upsert(db, {
-        slug: "activity_milestone",
-        name: "Activity Milestone",
+        slug: "race_milestone",
+        name: "Race Milestone",
         description: "Test badge",
         variants: {
           bronze: { description: "10+", svg_url: "url" },
@@ -155,29 +155,29 @@ describe("Badge Exporters", () => {
       });
     });
 
-    it("should export contributor badges to JSONL files", async () => {
-      await contributorBadgeQueries.award(db, {
-        slug: "activity_milestone__alice__bronze",
-        badge: "activity_milestone",
-        contributor: "alice",
+    it("should export organizer badges to JSONL files", async () => {
+      await organizerBadgeQueries.award(db, {
+        slug: "race_milestone__alice__bronze",
+        badge: "race_milestone",
+        organizer: "alice",
         variant: "bronze",
         achieved_on: "2025-01-05",
         meta: { auto_awarded: true },
       });
 
-      await contributorBadgeQueries.award(db, {
+      await organizerBadgeQueries.award(db, {
         slug: "streak_badge__alice__bronze",
         badge: "streak_badge",
-        contributor: "alice",
+        organizer: "alice",
         variant: "bronze",
         achieved_on: "2025-01-04",
         meta: null,
       });
 
-      await exportContributorBadges(db, TEST_DATA_DIR, logger);
+      await exportOrganizerBadges(db, TEST_DATA_DIR, logger);
 
       const content = await readFile(
-        join(TEST_DATA_DIR, "badges", "contributors", "alice.jsonl"),
+        join(TEST_DATA_DIR, "badges", "organizers", "alice.jsonl"),
         "utf-8",
       );
       const lines = content.trim().split("\n");
@@ -185,44 +185,42 @@ describe("Badge Exporters", () => {
       expect(lines).toHaveLength(2);
 
       const badge1 = JSON.parse(lines[0]);
-      expect(badge1.contributor).toBe("alice");
+      expect(badge1.organizer).toBe("alice");
       expect(badge1.badge).toBeDefined();
       expect(badge1.variant).toBeDefined();
     });
 
-    it("should create separate files for each contributor", async () => {
-      await contributorBadgeQueries.award(db, {
-        slug: "activity_milestone__alice__bronze",
-        badge: "activity_milestone",
-        contributor: "alice",
+    it("should create separate files for each organizer", async () => {
+      await organizerBadgeQueries.award(db, {
+        slug: "race_milestone__alice__bronze",
+        badge: "race_milestone",
+        organizer: "alice",
         variant: "bronze",
         achieved_on: "2025-01-05",
         meta: null,
       });
 
-      await contributorBadgeQueries.award(db, {
-        slug: "activity_milestone__bob__silver",
-        badge: "activity_milestone",
-        contributor: "bob",
+      await organizerBadgeQueries.award(db, {
+        slug: "race_milestone__bob__silver",
+        badge: "race_milestone",
+        organizer: "bob",
         variant: "silver",
         achieved_on: "2025-01-05",
         meta: null,
       });
 
-      await exportContributorBadges(db, TEST_DATA_DIR, logger);
+      await exportOrganizerBadges(db, TEST_DATA_DIR, logger);
 
-      const files = await readdir(
-        join(TEST_DATA_DIR, "badges", "contributors"),
-      );
+      const files = await readdir(join(TEST_DATA_DIR, "badges", "organizers"));
       expect(files).toContain("alice.jsonl");
       expect(files).toContain("bob.jsonl");
     });
 
     it("should preserve badge metadata", async () => {
-      await contributorBadgeQueries.award(db, {
-        slug: "activity_milestone__alice__bronze",
-        badge: "activity_milestone",
-        contributor: "alice",
+      await organizerBadgeQueries.award(db, {
+        slug: "race_milestone__alice__bronze",
+        badge: "race_milestone",
+        organizer: "alice",
         variant: "bronze",
         achieved_on: "2025-01-05",
         meta: {
@@ -232,10 +230,10 @@ describe("Badge Exporters", () => {
         },
       });
 
-      await exportContributorBadges(db, TEST_DATA_DIR, logger);
+      await exportOrganizerBadges(db, TEST_DATA_DIR, logger);
 
       const content = await readFile(
-        join(TEST_DATA_DIR, "badges", "contributors", "alice.jsonl"),
+        join(TEST_DATA_DIR, "badges", "organizers", "alice.jsonl"),
         "utf-8",
       );
       const badge = JSON.parse(content.trim());
@@ -245,19 +243,17 @@ describe("Badge Exporters", () => {
       expect(badge.meta.threshold).toBe(10);
     });
 
-    it("should handle contributors with no badges", async () => {
-      await exportContributorBadges(db, TEST_DATA_DIR, logger);
+    it("should handle organizers with no badges", async () => {
+      await exportOrganizerBadges(db, TEST_DATA_DIR, logger);
 
-      const files = await readdir(
-        join(TEST_DATA_DIR, "badges", "contributors"),
-      );
+      const files = await readdir(join(TEST_DATA_DIR, "badges", "organizers"));
       expect(files).toHaveLength(0);
     });
   });
 
   describe("exportBadges", () => {
     it("should export all badge data", async () => {
-      await contributorQueries.upsert(db, {
+      await organizerQueries.upsert(db, {
         username: "alice",
         name: "Alice",
         title: null,
@@ -268,16 +264,16 @@ describe("Badge Exporters", () => {
       });
 
       await badgeDefinitionQueries.upsert(db, {
-        slug: "activity_milestone",
-        name: "Activity Milestone",
+        slug: "race_milestone",
+        name: "Race Milestone",
         description: "Test badge",
         variants: { bronze: { description: "10+", svg_url: "url" } },
       });
 
-      await contributorBadgeQueries.award(db, {
-        slug: "activity_milestone__alice__bronze",
-        badge: "activity_milestone",
-        contributor: "alice",
+      await organizerBadgeQueries.award(db, {
+        slug: "race_milestone__alice__bronze",
+        badge: "race_milestone",
+        organizer: "alice",
         variant: "bronze",
         achieved_on: "2025-01-05",
         meta: null,
@@ -290,13 +286,13 @@ describe("Badge Exporters", () => {
         join(TEST_DATA_DIR, "badges", "definitions.json"),
         "utf-8",
       );
-      const contributorContent = await readFile(
-        join(TEST_DATA_DIR, "badges", "contributors", "alice.jsonl"),
+      const organizerContent = await readFile(
+        join(TEST_DATA_DIR, "badges", "organizers", "alice.jsonl"),
         "utf-8",
       );
 
       expect(JSON.parse(definitionsContent)).toHaveLength(1);
-      expect(contributorContent.trim()).toBeTruthy();
+      expect(organizerContent.trim()).toBeTruthy();
     });
   });
 });

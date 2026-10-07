@@ -4,17 +4,17 @@
 
 import type { Database, Logger } from "@starter/leaderboard-api";
 import {
-  activityDefinitionQueries,
-  activityQueries,
-  contributorAggregateDefinitionQueries,
-  contributorAggregateQueries,
-  contributorQueries,
   globalAggregateQueries,
+  organizerAggregateDefinitionQueries,
+  organizerAggregateQueries,
+  organizerQueries,
+  raceDefinitionQueries,
+  raceQueries,
 } from "@starter/leaderboard-api";
 
 /**
  * Run the aggregation phase
- * Calculates standard global and contributor aggregates
+ * Calculates standard global and organizer aggregates
  */
 export async function runAggregation(
   db: Database,
@@ -25,8 +25,8 @@ export async function runAggregation(
   // Calculate global aggregates
   await calculateGlobalAggregates(db, logger);
 
-  // Calculate contributor aggregates
-  await calculateContributorAggregates(db, logger);
+  // Calculate organizer aggregates
+  await calculateOrganizerAggregates(db, logger);
 
   logger.info("Aggregation phase complete");
 }
@@ -40,15 +40,15 @@ async function calculateGlobalAggregates(
 ): Promise<void> {
   logger.info("Calculating global aggregates");
 
-  // Calculate total contributors
-  const totalContributors = await contributorQueries.count(db);
+  // Calculate total organizers
+  const totalOrganizers = await organizerQueries.count(db);
   await globalAggregateQueries.upsert(db, {
-    slug: "total_contributors",
-    name: "Total Contributors",
-    description: "Total number of contributors",
+    slug: "total_organizers",
+    name: "Total Organizers",
+    description: "Total number of organizers",
     value: {
       type: "number",
-      value: totalContributors,
+      value: totalOrganizers,
       format: "integer",
     },
     hidden: false,
@@ -56,17 +56,17 @@ async function calculateGlobalAggregates(
       calculated_at: new Date().toISOString(),
     },
   });
-  logger.debug(`Total contributors: ${totalContributors}`);
+  logger.debug(`Total organizers: ${totalOrganizers}`);
 
-  // Calculate total activities
-  const totalActivities = await activityQueries.count(db);
+  // Calculate total races
+  const totalRaces = await raceQueries.count(db);
   await globalAggregateQueries.upsert(db, {
-    slug: "total_activities",
-    name: "Total Activities",
-    description: "Total number of activities",
+    slug: "total_races",
+    name: "Total Races",
+    description: "Total number of races",
     value: {
       type: "number",
-      value: totalActivities,
+      value: totalRaces,
       format: "integer",
     },
     hidden: false,
@@ -74,29 +74,28 @@ async function calculateGlobalAggregates(
       calculated_at: new Date().toISOString(),
     },
   });
-  logger.debug(`Total activities: ${totalActivities}`);
+  logger.debug(`Total races: ${totalRaces}`);
 
-  // Calculate active contributors in last 30 days
+  // Calculate active organizers in last 30 days
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split("T")[0];
   const today = new Date().toISOString().split("T")[0];
 
-  const recentActivities = await activityQueries.getByDateRange(
+  const recentRaces = await raceQueries.getByDateRange(
     db,
     thirtyDaysAgoStr,
     today,
   );
-  const activeContributors = new Set(recentActivities.map((a) => a.contributor))
-    .size;
+  const activeOrganizers = new Set(recentRaces.map((a) => a.organizer)).size;
 
   await globalAggregateQueries.upsert(db, {
-    slug: "active_contributors_last_30d",
-    name: "Active Contributors (Last 30 Days)",
-    description: "Number of contributors with activity in the last 30 days",
+    slug: "active_organizers_last_30d",
+    name: "Active Organizers (Last 30 Days)",
+    description: "Number of organizers with race in the last 30 days",
     value: {
       type: "number",
-      value: activeContributors,
+      value: activeOrganizers,
       format: "integer",
     },
     hidden: false,
@@ -106,30 +105,30 @@ async function calculateGlobalAggregates(
       period_end: today,
     },
   });
-  logger.debug(`Active contributors (last 30d): ${activeContributors}`);
+  logger.debug(`Active organizers (last 30d): ${activeOrganizers}`);
 
   logger.info("Global aggregates calculated", {
-    total_contributors: totalContributors,
-    total_activities: totalActivities,
-    active_contributors_last_30d: activeContributors,
+    total_organizers: totalOrganizers,
+    total_races: totalRaces,
+    active_organizers_last_30d: activeOrganizers,
   });
 
-  // Calculate per-activity-definition global counts
-  const activityDefinitions = await activityDefinitionQueries.getAll(db);
-  const allActivities = await activityQueries.getAll(db);
+  // Calculate per-race-definition global counts
+  const raceDefinitions = await raceDefinitionQueries.getAll(db);
+  const allRaces = await raceQueries.getAll(db);
 
   const countsByDefinition = new Map<string, number>();
-  for (const activity of allActivities) {
-    const count = countsByDefinition.get(activity.activity_definition) || 0;
-    countsByDefinition.set(activity.activity_definition, count + 1);
+  for (const race of allRaces) {
+    const count = countsByDefinition.get(race.race_definition) || 0;
+    countsByDefinition.set(race.race_definition, count + 1);
   }
 
-  for (const def of activityDefinitions) {
+  for (const def of raceDefinitions) {
     const count = countsByDefinition.get(def.slug) || 0;
     await globalAggregateQueries.upsert(db, {
-      slug: `activity_count:${def.slug}`,
+      slug: `race_count:${def.slug}`,
       name: `${def.name} Count`,
-      description: `Total number of ${def.name} activities`,
+      description: `Total number of ${def.name} races`,
       value: {
         type: "number",
         value: count,
@@ -137,103 +136,100 @@ async function calculateGlobalAggregates(
       },
       hidden: false,
       meta: {
-        activity_definition: def.slug,
+        race_definition: def.slug,
         calculated_at: new Date().toISOString(),
       },
     });
   }
   logger.debug(
-    `Per-activity-definition global counts calculated for ${activityDefinitions.length} definitions`,
+    `Per-race-definition global counts calculated for ${raceDefinitions.length} definitions`,
   );
 }
 
 /**
- * Calculate standard contributor aggregates
+ * Calculate standard organizer aggregates
  */
-async function calculateContributorAggregates(
+async function calculateOrganizerAggregates(
   db: Database,
   logger: Logger,
 ): Promise<void> {
-  logger.info("Calculating contributor aggregates");
+  logger.info("Calculating organizer aggregates");
 
-  // Define standard contributor aggregate definitions
+  // Define standard organizer aggregate definitions
   const definitions = [
     {
-      slug: "total_activity_points",
-      name: "Total Activity Points",
-      description: "Sum of all activity points for the contributor",
+      slug: "total_race_points",
+      name: "Total Race Points",
+      description: "Sum of all race points for the organizer",
       hidden: false,
     },
     {
-      slug: "activity_count",
-      name: "Activity Count",
-      description: "Total number of activities by the contributor",
+      slug: "race_count",
+      name: "Race Count",
+      description: "Total number of races by the organizer",
       hidden: false,
     },
     {
-      slug: "first_activity_date",
-      name: "First Activity Date",
-      description: "Date of the contributor's first activity",
+      slug: "first_race_date",
+      name: "First Race Date",
+      description: "Date of the organizer's first race",
       hidden: false,
     },
     {
-      slug: "last_activity_date",
-      name: "Last Activity Date",
-      description: "Date of the contributor's most recent activity",
+      slug: "last_race_date",
+      name: "Last Race Date",
+      description: "Date of the organizer's most recent race",
       hidden: false,
     },
     {
       slug: "active_days",
       name: "Active Days",
-      description: "Number of unique days with activity",
+      description: "Number of unique days with race",
       hidden: false,
     },
     {
-      slug: "avg_points_per_activity",
-      name: "Average Points Per Activity",
-      description: "Average points earned per activity",
+      slug: "avg_points_per_race",
+      name: "Average Points Per Race",
+      description: "Average points earned per race",
       hidden: false,
     },
   ];
 
   // Upsert definitions
   for (const def of definitions) {
-    await contributorAggregateDefinitionQueries.upsert(db, def);
+    await organizerAggregateDefinitionQueries.upsert(db, def);
   }
 
-  // Register per-activity-definition count aggregate definitions
-  const activityDefinitions = await activityDefinitionQueries.getAll(db);
-  for (const def of activityDefinitions) {
-    await contributorAggregateDefinitionQueries.upsert(db, {
-      slug: `activity_count:${def.slug}`,
+  // Register per-race-definition count aggregate definitions
+  const raceDefinitions = await raceDefinitionQueries.getAll(db);
+  for (const def of raceDefinitions) {
+    await organizerAggregateDefinitionQueries.upsert(db, {
+      slug: `race_count:${def.slug}`,
       name: `${def.name} Count`,
-      description: `Number of ${def.name} activities by the contributor`,
+      description: `Number of ${def.name} races by the organizer`,
       hidden: false,
     });
   }
 
-  // Get all contributors
-  const contributors = await contributorQueries.getAll(db);
-  logger.debug(`Processing ${contributors.length} contributors`);
+  // Get all organizers
+  const organizers = await organizerQueries.getAll(db);
+  logger.debug(`Processing ${organizers.length} organizers`);
 
   let processedCount = 0;
 
-  for (const contributor of contributors) {
-    const activities = await activityQueries.getByContributor(
-      db,
-      contributor.username,
-    );
+  for (const organizer of organizers) {
+    const races = await raceQueries.getByOrganizer(db, organizer.username);
 
-    if (activities.length === 0) {
-      // Skip contributors with no activities
+    if (races.length === 0) {
+      // Skip organizers with no races
       continue;
     }
 
     // Calculate total points
-    const totalPoints = activities.reduce((sum, a) => sum + (a.points || 0), 0);
-    await contributorAggregateQueries.upsert(db, {
-      aggregate: "total_activity_points",
-      contributor: contributor.username,
+    const totalPoints = races.reduce((sum, a) => sum + (a.points || 0), 0);
+    await organizerAggregateQueries.upsert(db, {
+      aggregate: "total_race_points",
+      organizer: organizer.username,
       value: {
         type: "number",
         value: totalPoints,
@@ -244,13 +240,13 @@ async function calculateContributorAggregates(
       },
     });
 
-    // Activity count
-    await contributorAggregateQueries.upsert(db, {
-      aggregate: "activity_count",
-      contributor: contributor.username,
+    // Race count
+    await organizerAggregateQueries.upsert(db, {
+      aggregate: "race_count",
+      organizer: organizer.username,
       value: {
         type: "number",
-        value: activities.length,
+        value: races.length,
         format: "integer",
       },
       meta: {
@@ -258,35 +254,35 @@ async function calculateContributorAggregates(
       },
     });
 
-    // Sort activities by date
-    const sortedActivities = [...activities].sort(
+    // Sort races by date
+    const sortedRaces = [...races].sort(
       (a, b) =>
         new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime(),
     );
 
-    // First activity date
-    const firstActivityDate = sortedActivities[0].occurred_at.split("T")[0];
-    await contributorAggregateQueries.upsert(db, {
-      aggregate: "first_activity_date",
-      contributor: contributor.username,
+    // First race date
+    const firstRaceDate = sortedRaces[0].occurred_at.split("T")[0];
+    await organizerAggregateQueries.upsert(db, {
+      aggregate: "first_race_date",
+      organizer: organizer.username,
       value: {
         type: "string",
-        value: firstActivityDate,
+        value: firstRaceDate,
       },
       meta: {
         calculated_at: new Date().toISOString(),
       },
     });
 
-    // Last activity date
-    const lastActivityDate =
-      sortedActivities[sortedActivities.length - 1].occurred_at.split("T")[0];
-    await contributorAggregateQueries.upsert(db, {
-      aggregate: "last_activity_date",
-      contributor: contributor.username,
+    // Last race date
+    const lastRaceDate =
+      sortedRaces[sortedRaces.length - 1].occurred_at.split("T")[0];
+    await organizerAggregateQueries.upsert(db, {
+      aggregate: "last_race_date",
+      organizer: organizer.username,
       value: {
         type: "string",
-        value: lastActivityDate,
+        value: lastRaceDate,
       },
       meta: {
         calculated_at: new Date().toISOString(),
@@ -294,12 +290,10 @@ async function calculateContributorAggregates(
     });
 
     // Active days (unique dates)
-    const uniqueDates = new Set(
-      activities.map((a) => a.occurred_at.split("T")[0]),
-    );
-    await contributorAggregateQueries.upsert(db, {
+    const uniqueDates = new Set(races.map((a) => a.occurred_at.split("T")[0]));
+    await organizerAggregateQueries.upsert(db, {
       aggregate: "active_days",
-      contributor: contributor.username,
+      organizer: organizer.username,
       value: {
         type: "number",
         value: uniqueDates.size,
@@ -311,12 +305,11 @@ async function calculateContributorAggregates(
       },
     });
 
-    // Average points per activity
-    const avgPoints =
-      activities.length > 0 ? totalPoints / activities.length : 0;
-    await contributorAggregateQueries.upsert(db, {
-      aggregate: "avg_points_per_activity",
-      contributor: contributor.username,
+    // Average points per race
+    const avgPoints = races.length > 0 ? totalPoints / races.length : 0;
+    await organizerAggregateQueries.upsert(db, {
+      aggregate: "avg_points_per_race",
+      organizer: organizer.username,
       value: {
         type: "number",
         value: Math.round(avgPoints * 100) / 100, // Round to 2 decimals
@@ -328,25 +321,25 @@ async function calculateContributorAggregates(
       },
     });
 
-    // Per-activity-definition counts
+    // Per-race-definition counts
     const countsByDef = new Map<string, number>();
-    for (const activity of activities) {
-      const count = countsByDef.get(activity.activity_definition) || 0;
-      countsByDef.set(activity.activity_definition, count + 1);
+    for (const race of races) {
+      const count = countsByDef.get(race.race_definition) || 0;
+      countsByDef.set(race.race_definition, count + 1);
     }
-    for (const def of activityDefinitions) {
+    for (const def of raceDefinitions) {
       const count = countsByDef.get(def.slug) || 0;
       if (count > 0) {
-        await contributorAggregateQueries.upsert(db, {
-          aggregate: `activity_count:${def.slug}`,
-          contributor: contributor.username,
+        await organizerAggregateQueries.upsert(db, {
+          aggregate: `race_count:${def.slug}`,
+          organizer: organizer.username,
           value: {
             type: "number",
             value: count,
             format: "integer",
           },
           meta: {
-            activity_definition: def.slug,
+            race_definition: def.slug,
             calculated_at: new Date().toISOString(),
           },
         });
@@ -356,7 +349,7 @@ async function calculateContributorAggregates(
     processedCount++;
   }
 
-  logger.info("Contributor aggregates calculated", {
-    contributors_processed: processedCount,
+  logger.info("Organizer aggregates calculated", {
+    organizers_processed: processedCount,
   });
 }

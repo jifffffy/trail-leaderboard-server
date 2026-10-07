@@ -36,8 +36,8 @@ Thank you for your interest in contributing to the MCP Server!
 packages/mcp-server/
 ├── src/
 │   ├── tools/           # Tool implementations
-│   │   ├── contributors.ts
-│   │   ├── activities.ts
+│   │   ├── organizers.ts
+│   │   ├── races.ts
 │   │   └── aggregates.ts
 │   ├── types.ts         # Type definitions
 │   ├── utils.ts         # Utility functions

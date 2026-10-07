@@ -115,7 +115,7 @@ describe("Plugin Loader", () => {
           type: "threshold",
           badgeSlug: "test-badge",
           enabled: true,
-          aggregateSlug: "activity_count",
+          aggregateSlug: "race_count",
           thresholds: [{ variant: "bronze", value: 10 }],
         },
       ],

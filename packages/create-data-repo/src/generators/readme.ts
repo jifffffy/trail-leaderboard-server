@@ -20,8 +20,8 @@ This repository contains the data used to build the ${
 .
 ├── config.yaml       # Site configuration
 ├── .leaderboard.db   # SQLite database (auto-generated)
-├── contributors/     # Contributor profiles (Markdown files)
-└── activities/       # Activity records (JSONL files)
+├── organizers/     # Organizer profiles (Markdown files)
+└── races/       # Race records (JSONL files)
 \`\`\`
 
 ## Getting Started
@@ -42,17 +42,17 @@ pnpm --filter @starter/plugin-runner scrape --data-dir .
 
 ### 3. Commit Changes
 
-After collection, contributor profiles and activities are exported to files:
+After collection, organizer profiles and races are exported to files:
 
 \`\`\`bash
-git add contributors/ activities/
+git add organizers/ races/
 git commit -m "Update data"
 git push
 \`\`\`
 
-## Contributor Profiles
+## Organizer Profiles
 
-Contributor profiles are stored as Markdown files with YAML frontmatter in the \`contributors/\` directory:
+Organizer profiles are stored as Markdown files with YAML frontmatter in the \`organizers/\` directory:
 
 \`\`\`markdown
 ---
@@ -63,7 +63,7 @@ avatar_url: https://example.com/avatar.jpg
 joining_date: 2020-01-01
 ---
 
-Alice is a long-time contributor...
+Alice is a long-time organizer...
 \`\`\`
 
 ### Profile Fields
@@ -75,22 +75,22 @@ Alice is a long-time contributor...
 - \`joining_date\` (YYYY-MM-DD) - Join date
 - \`meta\` - Custom metadata
 
-## Activities
+## Races
 
-Activities are stored as JSONL (JSON Lines) files in the \`activities/\` directory, one file per contributor:
+Races are stored as JSONL (JSON Lines) files in the \`races/\` directory, one file per organizer:
 
 \`\`\`jsonl
-{"slug":"alice-1","contributor":"alice","activity_definition":"entry_created","title":"Created an entry","occurred_at":"2024-01-15T10:00:00Z","link":"https://example.com/entries/1","points":10}
+{"slug":"alice-1","organizer":"alice","race_definition":"entry_created","title":"Created an entry","occurred_at":"2024-01-15T10:00:00Z","link":"https://example.com/entries/1","points":10}
 \`\`\`
 
-### Activity Fields
+### Race Fields
 
 - \`slug\` (required) - Unique identifier
-- \`contributor\` (required) - Username
-- \`activity_definition\` (required) - Activity type slug
-- \`title\` - Activity title
+- \`organizer\` (required) - Username
+- \`race_definition\` (required) - Race type slug
+- \`title\` - Race title
 - \`occurred_at\` (required) - ISO 8601 timestamp
-- \`link\` - URL to activity
+- \`link\` - URL to race
 - \`text\` - Additional text/description
 - \`points\` - Points awarded
 - \`meta\` - Custom metadata

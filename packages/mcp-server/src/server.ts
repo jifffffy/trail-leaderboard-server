@@ -17,38 +17,38 @@ import { getDatabaseUrl } from "./utils.js";
 
 // Import all tools
 import {
-  batchGetContributors,
-  BatchGetContributorsSchema,
-  batchGetContributorStats,
-  BatchGetContributorStatsSchema,
-  getActivity,
-  getActivityDefinitions,
-  GetActivityDefinitionsSchema,
-  GetActivitySchema,
-  getActivityTimeline,
-  GetActivityTimelineSchema,
+  batchGetOrganizers,
+  BatchGetOrganizersSchema,
+  batchGetOrganizerStats,
+  BatchGetOrganizerStatsSchema,
   getAggregateDefinitions,
   GetAggregateDefinitionsSchema,
   getBadges,
   GetBadgesSchema,
-  getContributor,
-  getContributorAggregates,
-  GetContributorAggregatesSchema,
-  GetContributorSchema,
-  getContributorStats,
-  GetContributorStatsSchema,
   getGlobalAggregates,
   GetGlobalAggregatesSchema,
+  getOrganizer,
+  getOrganizerAggregates,
+  GetOrganizerAggregatesSchema,
+  GetOrganizerSchema,
+  getOrganizerStats,
+  GetOrganizerStatsSchema,
+  getRace,
+  getRaceDefinitions,
+  GetRaceDefinitionsSchema,
+  GetRaceSchema,
+  getRaceTimeline,
+  GetRaceTimelineSchema,
   getRecentBadges,
   GetRecentBadgesSchema,
   getTopBadgeEarners,
   GetTopBadgeEarnersSchema,
-  queryActivities,
-  QueryActivitiesSchema,
-  queryContributors,
-  QueryContributorsSchema,
-  searchActivities,
-  SearchActivitiesSchema,
+  queryOrganizers,
+  QueryOrganizersSchema,
+  queryRaces,
+  QueryRacesSchema,
+  searchRaces,
+  SearchRacesSchema,
 } from "./tools/index.js";
 
 /**
@@ -81,8 +81,8 @@ export function createMCPServer(config: ServerConfig): Server {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [
       {
-        name: "query_contributors",
-        description: "Query contributors with pagination",
+        name: "query_organizers",
+        description: "Query organizers with pagination",
         inputSchema: {
           type: "object",
           properties: {
@@ -98,57 +98,57 @@ export function createMCPServer(config: ServerConfig): Server {
         },
       },
       {
-        name: "get_contributor",
-        description: "Get detailed information about a specific contributor",
+        name: "get_organizer",
+        description: "Get detailed information about a specific organizer",
         inputSchema: {
           type: "object",
           properties: {
-            username: { type: "string", description: "Contributor username" },
+            username: { type: "string", description: "Organizer username" },
           },
           required: ["username"],
         },
       },
       {
-        name: "get_contributor_stats",
+        name: "get_organizer_stats",
         description:
-          "Get comprehensive statistics for a contributor including activities, badges, and aggregates",
+          "Get comprehensive statistics for a organizer including races, badges, and aggregates",
         inputSchema: {
           type: "object",
           properties: {
-            username: { type: "string", description: "Contributor username" },
+            username: { type: "string", description: "Organizer username" },
           },
           required: ["username"],
         },
       },
       {
-        name: "batch_get_contributors",
-        description: "Get multiple contributors in a single batch request",
+        name: "batch_get_organizers",
+        description: "Get multiple organizers in a single batch request",
         inputSchema: {
           type: "object",
           properties: {
             usernames: {
               type: "array",
               items: { type: "string" },
-              description: "List of contributor usernames",
+              description: "List of organizer usernames",
             },
           },
           required: ["usernames"],
         },
       },
       {
-        name: "query_activities",
+        name: "query_races",
         description:
-          "Query activities with flexible filtering by contributor, activity type, and date range",
+          "Query races with flexible filtering by organizer, race type, and date range",
         inputSchema: {
           type: "object",
           properties: {
-            contributor: {
+            organizer: {
               type: "string",
-              description: "Filter by contributor username",
+              description: "Filter by organizer username",
             },
-            activity_type: {
+            race_type: {
               type: "string",
-              description: "Filter by activity definition slug",
+              description: "Filter by race definition slug",
             },
             start_date: {
               type: "string",
@@ -170,55 +170,54 @@ export function createMCPServer(config: ServerConfig): Server {
         },
       },
       {
-        name: "get_activity",
-        description: "Get a specific activity by slug",
+        name: "get_race",
+        description: "Get a specific race by slug",
         inputSchema: {
           type: "object",
           properties: {
-            slug: { type: "string", description: "Activity slug" },
+            slug: { type: "string", description: "Race slug" },
           },
           required: ["slug"],
         },
       },
       {
-        name: "get_activity_definitions",
-        description: "Get activity definitions (types of activities tracked)",
+        name: "get_race_definitions",
+        description: "Get race definitions (types of races tracked)",
         inputSchema: {
           type: "object",
           properties: {
             slug: {
               type: "string",
-              description: "Filter by specific activity slug",
+              description: "Filter by specific race slug",
             },
           },
         },
       },
       {
-        name: "get_activity_timeline",
-        description:
-          "Get activity timeline for a contributor grouped by time period",
+        name: "get_race_timeline",
+        description: "Get race timeline for a organizer grouped by time period",
         inputSchema: {
           type: "object",
           properties: {
-            username: { type: "string", description: "Contributor username" },
+            username: { type: "string", description: "Organizer username" },
             group_by: {
               type: "string",
               enum: ["day", "week", "month"],
-              description: "Group activities by time period",
+              description: "Group races by time period",
             },
           },
           required: ["username"],
         },
       },
       {
-        name: "search_activities",
-        description: "Search activities by title or text content",
+        name: "search_races",
+        description: "Search races by title or text content",
         inputSchema: {
           type: "object",
           properties: {
             query: {
               type: "string",
-              description: "Search query for activity title or text",
+              description: "Search query for race title or text",
             },
             limit: {
               type: "number",
@@ -230,13 +229,13 @@ export function createMCPServer(config: ServerConfig): Server {
       },
       {
         name: "get_badges",
-        description: "Get badge definitions or contributor badges",
+        description: "Get badge definitions or organizer badges",
         inputSchema: {
           type: "object",
           properties: {
             username: {
               type: "string",
-              description: "Get badges for a specific contributor",
+              description: "Get badges for a specific organizer",
             },
             badge_slug: {
               type: "string",
@@ -260,7 +259,7 @@ export function createMCPServer(config: ServerConfig): Server {
       },
       {
         name: "get_top_badge_earners",
-        description: "Get contributors with the most badges",
+        description: "Get organizers with the most badges",
         inputSchema: {
           type: "object",
           properties: {
@@ -286,12 +285,12 @@ export function createMCPServer(config: ServerConfig): Server {
         },
       },
       {
-        name: "get_contributor_aggregates",
-        description: "Get aggregates for a specific contributor",
+        name: "get_organizer_aggregates",
+        description: "Get aggregates for a specific organizer",
         inputSchema: {
           type: "object",
           properties: {
-            username: { type: "string", description: "Contributor username" },
+            username: { type: "string", description: "Organizer username" },
             slugs: {
               type: "array",
               items: { type: "string" },
@@ -303,7 +302,7 @@ export function createMCPServer(config: ServerConfig): Server {
       },
       {
         name: "get_aggregate_definitions",
-        description: "Get contributor aggregate definitions",
+        description: "Get organizer aggregate definitions",
         inputSchema: {
           type: "object",
           properties: {
@@ -315,23 +314,23 @@ export function createMCPServer(config: ServerConfig): Server {
         },
       },
       {
-        name: "batch_get_contributor_stats",
-        description: "Get statistics for multiple contributors in batch",
+        name: "batch_get_organizer_stats",
+        description: "Get statistics for multiple organizers in batch",
         inputSchema: {
           type: "object",
           properties: {
             usernames: {
               type: "array",
               items: { type: "string" },
-              description: "List of contributor usernames",
+              description: "List of organizer usernames",
             },
             include_aggregates: {
               type: "boolean",
-              description: "Include contributor aggregates",
+              description: "Include organizer aggregates",
             },
             include_badges: {
               type: "boolean",
-              description: "Include contributor badges",
+              description: "Include organizer badges",
             },
           },
           required: ["usernames"],
@@ -346,48 +345,39 @@ export function createMCPServer(config: ServerConfig): Server {
 
     try {
       switch (name) {
-        case "query_contributors":
-          return await queryContributors(
-            QueryContributorsSchema.parse(args),
+        case "query_organizers":
+          return await queryOrganizers(
+            QueryOrganizersSchema.parse(args),
             context,
           );
-        case "get_contributor":
-          return await getContributor(
-            GetContributorSchema.parse(args),
+        case "get_organizer":
+          return await getOrganizer(GetOrganizerSchema.parse(args), context);
+        case "get_organizer_stats":
+          return await getOrganizerStats(
+            GetOrganizerStatsSchema.parse(args),
             context,
           );
-        case "get_contributor_stats":
-          return await getContributorStats(
-            GetContributorStatsSchema.parse(args),
+        case "batch_get_organizers":
+          return await batchGetOrganizers(
+            BatchGetOrganizersSchema.parse(args),
             context,
           );
-        case "batch_get_contributors":
-          return await batchGetContributors(
-            BatchGetContributorsSchema.parse(args),
+        case "query_races":
+          return await queryRaces(QueryRacesSchema.parse(args), context);
+        case "get_race":
+          return await getRace(GetRaceSchema.parse(args), context);
+        case "get_race_definitions":
+          return await getRaceDefinitions(
+            GetRaceDefinitionsSchema.parse(args),
             context,
           );
-        case "query_activities":
-          return await queryActivities(
-            QueryActivitiesSchema.parse(args),
+        case "get_race_timeline":
+          return await getRaceTimeline(
+            GetRaceTimelineSchema.parse(args),
             context,
           );
-        case "get_activity":
-          return await getActivity(GetActivitySchema.parse(args), context);
-        case "get_activity_definitions":
-          return await getActivityDefinitions(
-            GetActivityDefinitionsSchema.parse(args),
-            context,
-          );
-        case "get_activity_timeline":
-          return await getActivityTimeline(
-            GetActivityTimelineSchema.parse(args),
-            context,
-          );
-        case "search_activities":
-          return await searchActivities(
-            SearchActivitiesSchema.parse(args),
-            context,
-          );
+        case "search_races":
+          return await searchRaces(SearchRacesSchema.parse(args), context);
         case "get_badges":
           return await getBadges(GetBadgesSchema.parse(args), context);
         case "get_recent_badges":
@@ -405,9 +395,9 @@ export function createMCPServer(config: ServerConfig): Server {
             GetGlobalAggregatesSchema.parse(args),
             context,
           );
-        case "get_contributor_aggregates":
-          return await getContributorAggregates(
-            GetContributorAggregatesSchema.parse(args),
+        case "get_organizer_aggregates":
+          return await getOrganizerAggregates(
+            GetOrganizerAggregatesSchema.parse(args),
             context,
           );
         case "get_aggregate_definitions":
@@ -415,9 +405,9 @@ export function createMCPServer(config: ServerConfig): Server {
             GetAggregateDefinitionsSchema.parse(args),
             context,
           );
-        case "batch_get_contributor_stats":
-          return await batchGetContributorStats(
-            BatchGetContributorStatsSchema.parse(args),
+        case "batch_get_organizer_stats":
+          return await batchGetOrganizerStats(
+            BatchGetOrganizerStatsSchema.parse(args),
             context,
           );
         default:

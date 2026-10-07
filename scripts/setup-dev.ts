@@ -11,7 +11,7 @@ import path from "path";
 const DATA_DIR = path.join(process.cwd(), "data");
 
 interface SetupOptions {
-  contributors?: number;
+  organizers?: number;
   days?: number;
   seed?: number;
   force?: boolean;
@@ -27,8 +27,8 @@ function parseArgs(): SetupOptions {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     switch (arg) {
-      case "--contributors":
-        options.contributors = parseInt(args[++i], 10);
+      case "--organizers":
+        options.organizers = parseInt(args[++i], 10);
         break;
       case "--days":
         options.days = parseInt(args[++i], 10);
@@ -48,15 +48,15 @@ Development Setup Script
 Usage: pnpm setup:dev [options]
 
 Options:
-  --contributors <n>  Number of contributors to generate (default: 30)
-  --days <n>          Number of days back for activities (default: 90)
+  --organizers <n>  Number of organizers to generate (default: 30)
+  --days <n>          Number of days back for races (default: 90)
   --seed <n>          Seed for reproducible data generation
   --force, -f         Force overwrite existing data directory
   --help, -h          Show this help message
 
 Examples:
   pnpm setup:dev
-  pnpm setup:dev --contributors 50 --days 60
+  pnpm setup:dev --organizers 50 --days 60
   pnpm setup:dev --seed 12345 --force
         `);
         process.exit(0);
@@ -85,14 +85,14 @@ async function createDirStructure(): Promise<void> {
   console.log("📁 Creating directory structure...");
 
   await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.mkdir(path.join(DATA_DIR, "contributors"), { recursive: true });
-  await fs.mkdir(path.join(DATA_DIR, "data", "activities"), {
+  await fs.mkdir(path.join(DATA_DIR, "organizers"), { recursive: true });
+  await fs.mkdir(path.join(DATA_DIR, "races", "organizers"), {
     recursive: true,
   });
 
   console.log("   ✓ Created data/");
-  console.log("   ✓ Created data/contributors/");
-  console.log("   ✓ Created data/data/activities/");
+  console.log("   ✓ Created data/organizers/");
+  console.log("   ✓ Created data/races/organizers/");
 }
 
 /**
@@ -124,11 +124,11 @@ leaderboard:
     dummy:
       source: "file://${process.cwd()}/packages/plugin-dummy/dist/index.js"
       config:
-        contributors:
-          count: ${options.contributors || 30}
-          minActivitiesPerContributor: 5
-          maxActivitiesPerContributor: 100
-        activities:
+        organizers:
+          count: ${options.organizers || 30}
+          minRacesPerOrganizer: 5
+          maxRacesPerOrganizer: 100
+        races:
           daysBack: ${options.days || 90}${
             options.seed !== undefined
               ? `\n          seed: ${options.seed}`
@@ -142,22 +142,22 @@ leaderboard:
   # Badge definitions and evaluation rules
   badges:
     definitions:
-      - slug: activity_milestone
-        name: "Activity Milestone"
-        description: "Awarded for reaching activity count milestones"
+      - slug: race_milestone
+        name: "Race Milestone"
+        description: "Awarded for reaching race count milestones"
         variants:
           bronze:
-            description: "10+ activities"
-            svg_url: "https://api.dicebear.com/7.x/shapes/svg?seed=bronze-activity"
+            description: "10+ races"
+            svg_url: "https://api.dicebear.com/7.x/shapes/svg?seed=bronze-race"
           silver:
-            description: "50+ activities"
-            svg_url: "https://api.dicebear.com/7.x/shapes/svg?seed=silver-activity"
+            description: "50+ races"
+            svg_url: "https://api.dicebear.com/7.x/shapes/svg?seed=silver-race"
           gold:
-            description: "100+ activities"
-            svg_url: "https://api.dicebear.com/7.x/shapes/svg?seed=gold-activity"
+            description: "100+ races"
+            svg_url: "https://api.dicebear.com/7.x/shapes/svg?seed=gold-race"
           platinum:
-            description: "500+ activities"
-            svg_url: "https://api.dicebear.com/7.x/shapes/svg?seed=platinum-activity"
+            description: "500+ races"
+            svg_url: "https://api.dicebear.com/7.x/shapes/svg?seed=platinum-race"
       - slug: points_milestone
         name: "Points Milestone"
         description: "Awarded for reaching points milestones"
@@ -176,7 +176,7 @@ leaderboard:
             svg_url: "https://api.dicebear.com/7.x/shapes/svg?seed=platinum-points"
       - slug: consistency_champion
         name: "Consistency Champion"
-        description: "Awarded for maintaining activity streaks"
+        description: "Awarded for maintaining race streaks"
         variants:
           bronze:
             description: "7 day streak"
@@ -192,9 +192,9 @@ leaderboard:
             svg_url: "https://api.dicebear.com/7.x/shapes/svg?seed=platinum-streak"
     rules:
       - type: threshold
-        badge_slug: activity_milestone
+        badge_slug: race_milestone
         enabled: true
-        aggregate_slug: activity_count
+        aggregate_slug: race_count
         thresholds:
           - variant: bronze
             value: 10
@@ -207,7 +207,7 @@ leaderboard:
       - type: threshold
         badge_slug: points_milestone
         enabled: true
-        aggregate_slug: total_activity_points
+        aggregate_slug: total_race_points
         thresholds:
           - variant: bronze
             value: 100
@@ -322,7 +322,7 @@ function displaySuccess(options: SetupOptions): void {
   console.log("╚════════════════════════════════════════╝\n");
 
   console.log("📊 Configuration:");
-  console.log(`   Contributors: ${options.contributors || 30}`);
+  console.log(`   Organizers: ${options.organizers || 30}`);
   console.log(`   Time Period: Last ${options.days || 90} days`);
   if (options.seed !== undefined) {
     console.log(`   Seed: ${options.seed} (reproducible)`);

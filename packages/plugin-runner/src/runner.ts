@@ -286,7 +286,7 @@ function transformConfigBadgeRules(
           badgeSlug: rule.badge_slug,
           enabled: rule.enabled,
           streakType: rule.streak_type,
-          activityDefinitions: rule.activity_definitions,
+          raceDefinitions: rule.race_definitions,
           thresholds: rule.thresholds,
         };
       case "growth":

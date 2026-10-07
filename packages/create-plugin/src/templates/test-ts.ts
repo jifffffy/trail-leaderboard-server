@@ -34,7 +34,7 @@ describe("${
     expect(plugin.scrape).toBeDefined();
   });
 
-  it("should setup activity definitions", async () => {
+  it("should setup race definitions", async () => {
     const logger = {
       info: () => {},
       warn: () => {},
@@ -56,7 +56,7 @@ describe("${
       });
     }
 
-    // TODO: Add assertions for your activity definitions
+    // TODO: Add assertions for your race definitions
   });
 
   it("should scrape data", async () => {

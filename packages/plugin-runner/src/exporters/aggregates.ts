@@ -4,9 +4,9 @@
 
 import type { Database, Logger } from "@starter/leaderboard-api";
 import {
-  contributorAggregateDefinitionQueries,
-  contributorAggregateQueries,
   globalAggregateQueries,
+  organizerAggregateDefinitionQueries,
+  organizerAggregateQueries,
 } from "@starter/leaderboard-api";
 import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
@@ -30,9 +30,9 @@ export async function exportGlobalAggregates(
 }
 
 /**
- * Export contributor aggregate definitions to aggregates/definitions.json
+ * Export organizer aggregate definitions to aggregates/definitions.json
  */
-export async function exportContributorAggregateDefinitions(
+export async function exportOrganizerAggregateDefinitions(
   db: Database,
   dataDir: string,
   logger: Logger,
@@ -40,51 +40,47 @@ export async function exportContributorAggregateDefinitions(
   const aggregatesDir = join(dataDir, "aggregates");
   await mkdir(aggregatesDir, { recursive: true });
 
-  const definitions = await contributorAggregateDefinitionQueries.getAll(db);
+  const definitions = await organizerAggregateDefinitionQueries.getAll(db);
   const content = JSON.stringify(definitions, null, 2);
 
   await writeFile(join(aggregatesDir, "definitions.json"), content, "utf-8");
-  logger.info(
-    `Exported ${definitions.length} contributor aggregate definitions`,
-  );
+  logger.info(`Exported ${definitions.length} organizer aggregate definitions`);
 }
 
 /**
- * Export contributor aggregates to aggregates/contributors/*.jsonl
+ * Export organizer aggregates to aggregates/organizers/*.jsonl
  */
-export async function exportContributorAggregates(
+export async function exportOrganizerAggregates(
   db: Database,
   dataDir: string,
   logger: Logger,
 ): Promise<void> {
-  const contributorsDir = join(dataDir, "aggregates", "contributors");
-  await mkdir(contributorsDir, { recursive: true });
+  const organizersDir = join(dataDir, "aggregates", "organizers");
+  await mkdir(organizersDir, { recursive: true });
 
-  const aggregates = await contributorAggregateQueries.getAll(db);
+  const aggregates = await organizerAggregateQueries.getAll(db);
 
-  // Group by contributor
-  const byContributor = new Map<string, typeof aggregates>();
+  // Group by organizer
+  const byOrganizer = new Map<string, typeof aggregates>();
   for (const aggregate of aggregates) {
-    if (!byContributor.has(aggregate.contributor)) {
-      byContributor.set(aggregate.contributor, []);
+    if (!byOrganizer.has(aggregate.organizer)) {
+      byOrganizer.set(aggregate.organizer, []);
     }
-    byContributor.get(aggregate.contributor)!.push(aggregate);
+    byOrganizer.get(aggregate.organizer)!.push(aggregate);
   }
 
-  // Write one file per contributor
-  for (const [username, contributorAggregates] of byContributor) {
-    const lines = contributorAggregates
-      .map((a) => JSON.stringify(a))
-      .join("\n");
+  // Write one file per organizer
+  for (const [username, organizerAggregates] of byOrganizer) {
+    const lines = organizerAggregates.map((a) => JSON.stringify(a)).join("\n");
     await writeFile(
-      join(contributorsDir, `${username}.jsonl`),
+      join(organizersDir, `${username}.jsonl`),
       lines + "\n",
       "utf-8",
     );
   }
 
   logger.info(
-    `Exported ${aggregates.length} contributor aggregates for ${byContributor.size} contributors`,
+    `Exported ${aggregates.length} organizer aggregates for ${byOrganizer.size} organizers`,
   );
 }
 
@@ -98,6 +94,6 @@ export async function exportAggregates(
 ): Promise<void> {
   logger.info("Exporting aggregates");
   await exportGlobalAggregates(db, dataDir, logger);
-  await exportContributorAggregateDefinitions(db, dataDir, logger);
-  await exportContributorAggregates(db, dataDir, logger);
+  await exportOrganizerAggregateDefinitions(db, dataDir, logger);
+  await exportOrganizerAggregates(db, dataDir, logger);
 }

@@ -3,21 +3,25 @@
  * Plugin runner CLI entry point
  */
 
-import { getDataDir } from "@starter/leaderboard-api";
+import {
+  dropAllTables,
+  getDataDir,
+  initializeSchema,
+} from "@starter/leaderboard-api";
 import { parseArgs } from "util";
 import { runAggregation } from "./aggregator";
 import { loadConfig } from "./config";
 import { initDatabase } from "./database";
-import { exportActivities } from "./exporters/activities";
-import { exportActivityDefinitions } from "./exporters/activity-definitions";
 import { exportAggregates } from "./exporters/aggregates";
 import { exportBadges } from "./exporters/badges";
-import { exportContributors } from "./exporters/contributors";
-import { importActivities } from "./importers/activities";
-import { importActivityDefinitions } from "./importers/activity-definitions";
+import { exportOrganizers } from "./exporters/organizers";
+import { exportRaceDefinitions } from "./exporters/race-definitions";
+import { exportRaces } from "./exporters/races";
 import { importAggregates } from "./importers/aggregates";
 import { importBadges } from "./importers/badges";
-import { importContributors } from "./importers/contributors";
+import { importOrganizers } from "./importers/organizers";
+import { importRaceDefinitions } from "./importers/race-definitions";
+import { importRaces } from "./importers/races";
 import { createLogger } from "./logger";
 import { initObservability } from "./observability";
 import {
@@ -49,6 +53,10 @@ async function main() {
         short: "d",
       },
       debug: {
+        type: "boolean",
+        default: false,
+      },
+      fresh: {
         type: "boolean",
         default: false,
       },
@@ -94,12 +102,20 @@ async function main() {
     const db = await initDatabase(dataDir);
     log.info("Database initialized");
 
+    // Fresh run: drop all tables so the build reflects only the current source
+    // data instead of accumulating over previous runs.
+    if (values.fresh) {
+      log.info("Fresh run: resetting database");
+      await dropAllTables(db);
+      await initializeSchema(db);
+    }
+
     // Import phase
     if (shouldRun("import")) {
       log.info("Importing existing data");
-      await importContributors(db, dataDir, log);
-      await importActivityDefinitions(db, dataDir, log);
-      await importActivities(db, dataDir, log);
+      await importOrganizers(db, dataDir, log);
+      await importRaceDefinitions(db, dataDir, log);
+      await importRaces(db, dataDir, log);
       await importAggregates(db, dataDir, log);
       await importBadges(db, dataDir, log);
       log.info("Import complete");
@@ -150,9 +166,9 @@ async function main() {
     // Export phase
     if (shouldRun("export")) {
       log.info("Exporting data");
-      await exportContributors(db, dataDir, log);
-      await exportActivityDefinitions(db, dataDir, log);
-      await exportActivities(db, dataDir, log);
+      await exportOrganizers(db, dataDir, log);
+      await exportRaceDefinitions(db, dataDir, log);
+      await exportRaces(db, dataDir, log);
       await exportAggregates(db, dataDir, log);
       await exportBadges(db, dataDir, log);
       log.info("Export complete");

@@ -4,21 +4,21 @@
 
 import type { Database } from "@starter/leaderboard-api";
 import {
-  contributorAggregateDefinitionQueries,
-  contributorAggregateQueries,
-  contributorQueries,
   createDatabase,
   globalAggregateQueries,
   initializeSchema,
+  organizerAggregateDefinitionQueries,
+  organizerAggregateQueries,
+  organizerQueries,
 } from "@starter/leaderboard-api";
 import { mkdir, rm, writeFile } from "fs/promises";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   importAggregates,
-  importContributorAggregateDefinitions,
-  importContributorAggregates,
   importGlobalAggregates,
+  importOrganizerAggregateDefinitions,
+  importOrganizerAggregates,
 } from "../../importers/aggregates";
 import { createLogger } from "../../logger";
 
@@ -43,15 +43,15 @@ describe("Aggregate Importers", () => {
     it("should import global aggregates from JSON", async () => {
       const aggregates = [
         {
-          slug: "total_contributors",
-          name: "Total Contributors",
-          description: "Total number of contributors",
+          slug: "total_organizers",
+          name: "Total Organizers",
+          description: "Total number of organizers",
           value: { type: "number", value: 42, format: "integer" },
           meta: { calculated_at: "2025-01-05T12:00:00Z" },
         },
         {
-          slug: "total_activities",
-          name: "Total Activities",
+          slug: "total_races",
+          name: "Total Races",
           description: null,
           value: { type: "number", value: 100, format: "integer" },
           meta: null,
@@ -70,8 +70,8 @@ describe("Aggregate Importers", () => {
       const imported = await globalAggregateQueries.getAll(db);
       expect(imported).toHaveLength(2);
       const slugs = imported.map((a) => a.slug).sort();
-      expect(slugs).toContain("total_contributors");
-      expect(slugs).toContain("total_activities");
+      expect(slugs).toContain("total_organizers");
+      expect(slugs).toContain("total_races");
     });
 
     it("should handle missing global aggregates file", async () => {
@@ -122,7 +122,7 @@ describe("Aggregate Importers", () => {
     });
   });
 
-  describe("importContributorAggregateDefinitions", () => {
+  describe("importOrganizerAggregateDefinitions", () => {
     it("should import aggregate definitions from JSON", async () => {
       const definitions = [
         {
@@ -144,9 +144,9 @@ describe("Aggregate Importers", () => {
         "utf-8",
       );
 
-      await importContributorAggregateDefinitions(db, TEST_DATA_DIR, logger);
+      await importOrganizerAggregateDefinitions(db, TEST_DATA_DIR, logger);
 
-      const imported = await contributorAggregateDefinitionQueries.getAll(db);
+      const imported = await organizerAggregateDefinitionQueries.getAll(db);
       expect(imported).toHaveLength(2);
       const slugs = imported.map((d) => d.slug).sort();
       expect(slugs).toContain("pr_merged_count");
@@ -154,17 +154,17 @@ describe("Aggregate Importers", () => {
     });
 
     it("should handle missing definitions file", async () => {
-      await importContributorAggregateDefinitions(db, TEST_DATA_DIR, logger);
+      await importOrganizerAggregateDefinitions(db, TEST_DATA_DIR, logger);
 
-      const imported = await contributorAggregateDefinitionQueries.getAll(db);
+      const imported = await organizerAggregateDefinitionQueries.getAll(db);
       expect(imported).toHaveLength(0);
     });
   });
 
-  describe("importContributorAggregates", () => {
+  describe("importOrganizerAggregates", () => {
     beforeEach(async () => {
-      // Setup contributors and definitions
-      await contributorQueries.upsert(db, {
+      // Setup organizers and definitions
+      await organizerQueries.upsert(db, {
         username: "alice",
         name: "Alice",
         title: null,
@@ -174,55 +174,55 @@ describe("Aggregate Importers", () => {
         meta: null,
       });
 
-      await contributorAggregateDefinitionQueries.upsert(db, {
-        slug: "activity_count",
-        name: "Activity Count",
+      await organizerAggregateDefinitionQueries.upsert(db, {
+        slug: "race_count",
+        name: "Race Count",
         description: null,
       });
 
-      await contributorAggregateDefinitionQueries.upsert(db, {
+      await organizerAggregateDefinitionQueries.upsert(db, {
         slug: "total_points",
         name: "Total Points",
         description: null,
       });
     });
 
-    it("should import contributor aggregates from JSONL files", async () => {
+    it("should import organizer aggregates from JSONL files", async () => {
       const aggregates = [
         {
-          aggregate: "activity_count",
-          contributor: "alice",
+          aggregate: "race_count",
+          organizer: "alice",
           value: { type: "number", value: 42, format: "integer" },
           meta: { calculated_at: "2025-01-05T12:00:00Z" },
         },
         {
           aggregate: "total_points",
-          contributor: "alice",
+          organizer: "alice",
           value: { type: "number", value: 250, format: "integer" },
           meta: null,
         },
       ];
 
-      await mkdir(join(TEST_DATA_DIR, "aggregates", "contributors"), {
+      await mkdir(join(TEST_DATA_DIR, "aggregates", "organizers"), {
         recursive: true,
       });
       await writeFile(
-        join(TEST_DATA_DIR, "aggregates", "contributors", "alice.jsonl"),
+        join(TEST_DATA_DIR, "aggregates", "organizers", "alice.jsonl"),
         aggregates.map((a) => JSON.stringify(a)).join("\n") + "\n",
         "utf-8",
       );
 
-      await importContributorAggregates(db, TEST_DATA_DIR, logger);
+      await importOrganizerAggregates(db, TEST_DATA_DIR, logger);
 
-      const imported = await contributorAggregateQueries.getByContributor(
+      const imported = await organizerAggregateQueries.getByOrganizer(
         db,
         "alice",
       );
       expect(imported).toHaveLength(2);
     });
 
-    it("should handle multiple contributor files", async () => {
-      await contributorQueries.upsert(db, {
+    it("should handle multiple organizer files", async () => {
+      await organizerQueries.upsert(db, {
         username: "bob",
         name: "Bob",
         title: null,
@@ -232,15 +232,15 @@ describe("Aggregate Importers", () => {
         meta: null,
       });
 
-      await mkdir(join(TEST_DATA_DIR, "aggregates", "contributors"), {
+      await mkdir(join(TEST_DATA_DIR, "aggregates", "organizers"), {
         recursive: true,
       });
 
       await writeFile(
-        join(TEST_DATA_DIR, "aggregates", "contributors", "alice.jsonl"),
+        join(TEST_DATA_DIR, "aggregates", "organizers", "alice.jsonl"),
         JSON.stringify({
-          aggregate: "activity_count",
-          contributor: "alice",
+          aggregate: "race_count",
+          organizer: "alice",
           value: { type: "number", value: 42, format: "integer" },
           meta: null,
         }) + "\n",
@@ -248,40 +248,37 @@ describe("Aggregate Importers", () => {
       );
 
       await writeFile(
-        join(TEST_DATA_DIR, "aggregates", "contributors", "bob.jsonl"),
+        join(TEST_DATA_DIR, "aggregates", "organizers", "bob.jsonl"),
         JSON.stringify({
-          aggregate: "activity_count",
-          contributor: "bob",
+          aggregate: "race_count",
+          organizer: "bob",
           value: { type: "number", value: 30, format: "integer" },
           meta: null,
         }) + "\n",
         "utf-8",
       );
 
-      await importContributorAggregates(db, TEST_DATA_DIR, logger);
+      await importOrganizerAggregates(db, TEST_DATA_DIR, logger);
 
-      const aliceAggs = await contributorAggregateQueries.getByContributor(
+      const aliceAggs = await organizerAggregateQueries.getByOrganizer(
         db,
         "alice",
       );
-      const bobAggs = await contributorAggregateQueries.getByContributor(
-        db,
-        "bob",
-      );
+      const bobAggs = await organizerAggregateQueries.getByOrganizer(db, "bob");
 
       expect(aliceAggs).toHaveLength(1);
       expect(bobAggs).toHaveLength(1);
     });
 
     it("should handle aggregates with units", async () => {
-      await mkdir(join(TEST_DATA_DIR, "aggregates", "contributors"), {
+      await mkdir(join(TEST_DATA_DIR, "aggregates", "organizers"), {
         recursive: true,
       });
       await writeFile(
-        join(TEST_DATA_DIR, "aggregates", "contributors", "alice.jsonl"),
+        join(TEST_DATA_DIR, "aggregates", "organizers", "alice.jsonl"),
         JSON.stringify({
-          aggregate: "activity_count",
-          contributor: "alice",
+          aggregate: "race_count",
+          organizer: "alice",
           value: {
             type: "number",
             value: 7200000,
@@ -293,13 +290,13 @@ describe("Aggregate Importers", () => {
         "utf-8",
       );
 
-      await importContributorAggregates(db, TEST_DATA_DIR, logger);
+      await importOrganizerAggregates(db, TEST_DATA_DIR, logger);
 
       const aggregate =
-        await contributorAggregateQueries.getByContributorAndAggregate(
+        await organizerAggregateQueries.getByOrganizerAndAggregate(
           db,
           "alice",
-          "activity_count",
+          "race_count",
         );
 
       if (aggregate?.value.type === "number") {
@@ -308,17 +305,17 @@ describe("Aggregate Importers", () => {
       }
     });
 
-    it("should handle missing contributors directory", async () => {
-      await importContributorAggregates(db, TEST_DATA_DIR, logger);
+    it("should handle missing organizers directory", async () => {
+      await importOrganizerAggregates(db, TEST_DATA_DIR, logger);
 
-      const aggregates = await contributorAggregateQueries.getAll(db);
+      const aggregates = await organizerAggregateQueries.getAll(db);
       expect(aggregates).toHaveLength(0);
     });
   });
 
   describe("importAggregates", () => {
     it("should import all aggregate data", async () => {
-      await contributorQueries.upsert(db, {
+      await organizerQueries.upsert(db, {
         username: "alice",
         name: "Alice",
         title: null,
@@ -328,7 +325,7 @@ describe("Aggregate Importers", () => {
         meta: null,
       });
 
-      await mkdir(join(TEST_DATA_DIR, "aggregates", "contributors"), {
+      await mkdir(join(TEST_DATA_DIR, "aggregates", "organizers"), {
         recursive: true,
       });
 
@@ -337,8 +334,8 @@ describe("Aggregate Importers", () => {
         join(TEST_DATA_DIR, "aggregates", "global.json"),
         JSON.stringify([
           {
-            slug: "total_contributors",
-            name: "Total Contributors",
+            slug: "total_organizers",
+            name: "Total Organizers",
             description: null,
             value: { type: "number", value: 1, format: "integer" },
             meta: null,
@@ -352,20 +349,20 @@ describe("Aggregate Importers", () => {
         join(TEST_DATA_DIR, "aggregates", "definitions.json"),
         JSON.stringify([
           {
-            slug: "activity_count",
-            name: "Activity Count",
+            slug: "race_count",
+            name: "Race Count",
             description: null,
           },
         ]),
         "utf-8",
       );
 
-      // Contributor aggregates
+      // Organizer aggregates
       await writeFile(
-        join(TEST_DATA_DIR, "aggregates", "contributors", "alice.jsonl"),
+        join(TEST_DATA_DIR, "aggregates", "organizers", "alice.jsonl"),
         JSON.stringify({
-          aggregate: "activity_count",
-          contributor: "alice",
+          aggregate: "race_count",
+          organizer: "alice",
           value: { type: "number", value: 42, format: "integer" },
           meta: null,
         }) + "\n",
@@ -375,13 +372,12 @@ describe("Aggregate Importers", () => {
       await importAggregates(db, TEST_DATA_DIR, logger);
 
       const globalAggs = await globalAggregateQueries.getAll(db);
-      const definitions =
-        await contributorAggregateDefinitionQueries.getAll(db);
-      const contributorAggs = await contributorAggregateQueries.getAll(db);
+      const definitions = await organizerAggregateDefinitionQueries.getAll(db);
+      const organizerAggs = await organizerAggregateQueries.getAll(db);
 
       expect(globalAggs).toHaveLength(1);
       expect(definitions).toHaveLength(1);
-      expect(contributorAggs).toHaveLength(1);
+      expect(organizerAggs).toHaveLength(1);
     });
   });
 });

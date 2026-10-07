@@ -646,13 +646,13 @@ describe("evaluateAllBadges", () => {
           type: "threshold" as const,
           badge_slug: "test-threshold-badge",
           enabled: true,
-          aggregate_slug: "activity_count",
+          aggregate_slug: "race_count",
           thresholds: [{ variant: "bronze", value: 5 }],
         },
       ],
     };
 
-    // Should not throw (no contributors to evaluate against)
+    // Should not throw (no organizers to evaluate against)
     await expect(
       evaluateAllBadges(loaded, config, db, logger),
     ).resolves.not.toThrow();

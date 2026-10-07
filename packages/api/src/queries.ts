@@ -3,82 +3,82 @@
  */
 
 import type {
-  Activity,
-  ActivityDefinition,
   AggregateValue,
   BadgeDefinition,
-  Contributor,
-  ContributorAggregate,
-  ContributorAggregateDefinition,
-  ContributorBadge,
   Database,
   GlobalAggregate,
+  Organizer,
+  OrganizerAggregate,
+  OrganizerAggregateDefinition,
+  OrganizerBadge,
+  Race,
+  RaceDefinition,
 } from "./types";
 
 /**
- * Helper to parse contributor JSON fields
+ * Helper to parse organizer JSON fields
  */
-function parseContributor(row: any): Contributor {
+function parseOrganizer(row: any): Organizer {
   return {
     ...row,
     meta: row.meta ? JSON.parse(row.meta as string) : null,
-  } as Contributor;
+  } as Organizer;
 }
 
 /**
- * Contributor queries
+ * Organizer queries
  */
-export const contributorQueries = {
+export const organizerQueries = {
   /**
-   * Get all contributors
+   * Get all organizers
    */
-  async getAll(db: Database): Promise<Contributor[]> {
+  async getAll(db: Database): Promise<Organizer[]> {
     const result = await db.execute(
-      "SELECT * FROM contributor ORDER BY username",
+      "SELECT * FROM organizer ORDER BY username",
     );
-    return result.rows.map(parseContributor);
+    return result.rows.map(parseOrganizer);
   },
 
   /**
-   * Get contributor by username
+   * Get organizer by username
    */
   async getByUsername(
     db: Database,
     username: string,
-  ): Promise<Contributor | null> {
+  ): Promise<Organizer | null> {
     const result = await db.execute(
-      "SELECT * FROM contributor WHERE username = ?",
+      "SELECT * FROM organizer WHERE username = ?",
       [username],
     );
-    return result.rows[0] ? parseContributor(result.rows[0]) : null;
+    return result.rows[0] ? parseOrganizer(result.rows[0]) : null;
   },
 
   /**
-   * Insert or ignore contributor (used by plugins)
+   * Insert or ignore organizer (used by plugins)
    */
-  async insertOrIgnore(db: Database, contributor: Contributor): Promise<void> {
+  async insertOrIgnore(db: Database, organizer: Organizer): Promise<void> {
     await db.execute(
-      `INSERT OR IGNORE INTO contributor (
+      `INSERT OR IGNORE INTO organizer (
         username, name, title, avatar_url, bio, joining_date, meta
       ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
-        contributor.username,
-        contributor.name,
-        contributor.title,
-        contributor.avatar_url,
-        contributor.bio,
-        contributor.joining_date,
-        contributor.meta ? JSON.stringify(contributor.meta) : null,
+        organizer.username,
+        organizer.name,
+        organizer.title,
+        organizer.avatar_url,
+        organizer.bio,
+        organizer.joining_date,
+        organizer.meta ? JSON.stringify(organizer.meta) : null,
       ],
     );
   },
 
   /**
-   * Insert or update contributor
+   * Insert or update organizer
    */
-  async upsert(db: Database, contributor: Contributor): Promise<void> {
+  async upsert(db: Database, organizer: Organizer): Promise<void> {
     await db.execute(
-      `INSERT INTO contributor (
+      `INSERT INTO organizer (
         username, name, title, avatar_url, bio, joining_date, meta
       ) VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(username) DO UPDATE SET
@@ -89,46 +89,44 @@ export const contributorQueries = {
         joining_date = excluded.joining_date,
         meta = excluded.meta`,
       [
-        contributor.username,
-        contributor.name,
-        contributor.title,
-        contributor.avatar_url,
-        contributor.bio,
-        contributor.joining_date,
-        contributor.meta ? JSON.stringify(contributor.meta) : null,
+        organizer.username,
+        organizer.name,
+        organizer.title,
+        organizer.avatar_url,
+        organizer.bio,
+        organizer.joining_date,
+        organizer.meta ? JSON.stringify(organizer.meta) : null,
       ],
     );
   },
 
   /**
-   * Delete contributor
+   * Delete organizer
    */
   async delete(db: Database, username: string): Promise<void> {
-    await db.execute("DELETE FROM contributor WHERE username = ?", [username]);
+    await db.execute("DELETE FROM organizer WHERE username = ?", [username]);
   },
 
   /**
-   * Count total contributors
+   * Count total organizers
    */
   async count(db: Database): Promise<number> {
-    const result = await db.execute(
-      "SELECT COUNT(*) as count FROM contributor",
-    );
+    const result = await db.execute("SELECT COUNT(*) as count FROM organizer");
     return (result.rows[0] as { count: number }).count;
   },
 
   /**
-   * Get all contributor usernames (optimized - returns only usernames)
+   * Get all organizer usernames (optimized - returns only usernames)
    */
   async getAllUsernames(db: Database): Promise<string[]> {
     const result = await db.execute(
-      "SELECT username FROM contributor ORDER BY username",
+      "SELECT username FROM organizer ORDER BY username",
     );
     return result.rows.map((row: any) => row.username as string);
   },
 
   /**
-   * Get contributors with total points.
+   * Get organizers with total points.
    * Optimized with JOIN and GROUP BY to avoid N+1 queries
    */
   async getLeaderboardWithPoints(db: Database): Promise<
@@ -145,9 +143,9 @@ export const contributorQueries = {
         c.name,
         c.avatar_url,
         COALESCE(SUM(COALESCE(a.points, ad.points, 0)), 0) as totalPoints
-      FROM contributor c
-      LEFT JOIN activity a ON c.username = a.contributor
-      LEFT JOIN activity_definition ad ON a.activity_definition = ad.slug
+      FROM organizer c
+      LEFT JOIN race a ON c.username = a.organizer
+      LEFT JOIN race_definition ad ON a.race_definition = ad.slug
       GROUP BY c.username
       ORDER BY totalPoints DESC
     `;
@@ -162,10 +160,10 @@ export const contributorQueries = {
   },
 
   /**
-   * Get contributors who were active within a date range.
+   * Get organizers who were active within a date range.
    * Returns them sorted by points earned in that period.
    */
-  async getActiveContributors(
+  async getActiveOrganizers(
     db: Database,
     startDate: string,
     endDate: string,
@@ -183,9 +181,9 @@ export const contributorQueries = {
         c.name,
         c.avatar_url,
         COALESCE(SUM(COALESCE(a.points, ad.points, 0)), 0) as total_points
-      FROM activity a
-      JOIN contributor c ON a.contributor = c.username
-      LEFT JOIN activity_definition ad ON a.activity_definition = ad.slug
+      FROM race a
+      JOIN organizer c ON a.organizer = c.username
+      LEFT JOIN race_definition ad ON a.race_definition = ad.slug
       WHERE a.occurred_at >= ? AND a.occurred_at <= ?
       GROUP BY c.username
       ORDER BY total_points DESC
@@ -202,42 +200,39 @@ export const contributorQueries = {
 };
 
 /**
- * Activity definition queries
+ * Race definition queries
  */
-export const activityDefinitionQueries = {
+export const raceDefinitionQueries = {
   /**
-   * Get all activity definitions
+   * Get all race definitions
    */
-  async getAll(db: Database): Promise<ActivityDefinition[]> {
+  async getAll(db: Database): Promise<RaceDefinition[]> {
     const result = await db.execute(
-      "SELECT * FROM activity_definition ORDER BY slug",
+      "SELECT * FROM race_definition ORDER BY slug",
     );
-    return result.rows as unknown as ActivityDefinition[];
+    return result.rows as unknown as RaceDefinition[];
   },
 
   /**
-   * Get activity definition by slug
+   * Get race definition by slug
    */
-  async getBySlug(
-    db: Database,
-    slug: string,
-  ): Promise<ActivityDefinition | null> {
+  async getBySlug(db: Database, slug: string): Promise<RaceDefinition | null> {
     const result = await db.execute(
-      "SELECT * FROM activity_definition WHERE slug = ?",
+      "SELECT * FROM race_definition WHERE slug = ?",
       [slug],
     );
-    return (result.rows[0] as unknown as ActivityDefinition) || null;
+    return (result.rows[0] as unknown as RaceDefinition) || null;
   },
 
   /**
-   * Insert or ignore activity definition (used by plugins)
+   * Insert or ignore race definition (used by plugins)
    */
   async insertOrIgnore(
     db: Database,
-    definition: ActivityDefinition,
+    definition: RaceDefinition,
   ): Promise<void> {
     await db.execute(
-      `INSERT OR IGNORE INTO activity_definition (slug, name, description, points, icon)
+      `INSERT OR IGNORE INTO race_definition (slug, name, description, points, icon)
        VALUES (?, ?, ?, ?, ?)`,
       [
         definition.slug,
@@ -250,11 +245,11 @@ export const activityDefinitionQueries = {
   },
 
   /**
-   * Insert or update activity definition
+   * Insert or update race definition
    */
-  async upsert(db: Database, definition: ActivityDefinition): Promise<void> {
+  async upsert(db: Database, definition: RaceDefinition): Promise<void> {
     await db.execute(
-      `INSERT INTO activity_definition (slug, name, description, points, icon)
+      `INSERT INTO race_definition (slug, name, description, points, icon)
        VALUES (?, ?, ?, ?, ?)
        ON CONFLICT(slug) DO UPDATE SET
          name = excluded.name,
@@ -272,44 +267,40 @@ export const activityDefinitionQueries = {
   },
 
   /**
-   * Count total activity definitions
+   * Count total race definitions
    */
   async count(db: Database): Promise<number> {
     const result = await db.execute(
-      "SELECT COUNT(*) as count FROM activity_definition",
+      "SELECT COUNT(*) as count FROM race_definition",
     );
     return (result.rows[0] as { count: number }).count;
   },
 };
 
 /**
- * Helper to parse activity JSON fields
+ * Helper to parse race JSON fields
  */
-function parseActivity(row: any): Activity {
+function parseRace(row: any): Race {
   return {
     ...row,
     meta: row.meta ? JSON.parse(row.meta as string) : null,
-  } as Activity;
+  } as Race;
 }
 
 /**
- * Activity queries
+ * Race queries
  */
-export const activityQueries = {
+export const raceQueries = {
   /**
-   * Get all activities
+   * Get all races
    */
-  async getAll(
-    db: Database,
-    limit?: number,
-    offset?: number,
-  ): Promise<Activity[]> {
+  async getAll(db: Database, limit?: number, offset?: number): Promise<Race[]> {
     let sql = `
       SELECT 
         a.*,
         COALESCE(a.points, ad.points, 0) as points
-      FROM activity a
-      LEFT JOIN activity_definition ad ON a.activity_definition = ad.slug
+      FROM race a
+      LEFT JOIN race_definition ad ON a.race_definition = ad.slug
       ORDER BY a.occurred_at DESC
     `;
     const params: unknown[] = [];
@@ -325,24 +316,24 @@ export const activityQueries = {
     }
 
     const result = await db.execute(sql, params);
-    return result.rows.map(parseActivity);
+    return result.rows.map(parseRace);
   },
 
   /**
-   * Get activities by contributor
+   * Get races by organizer
    */
-  async getByContributor(
+  async getByOrganizer(
     db: Database,
     username: string,
     limit?: number,
-  ): Promise<Activity[]> {
+  ): Promise<Race[]> {
     let sql = `
       SELECT 
         a.*,
         COALESCE(a.points, ad.points, 0) as points
-      FROM activity a
-      LEFT JOIN activity_definition ad ON a.activity_definition = ad.slug
-      WHERE a.contributor = ?
+      FROM race a
+      LEFT JOIN race_definition ad ON a.race_definition = ad.slug
+      WHERE a.organizer = ?
       ORDER BY a.occurred_at DESC
     `;
     const params: unknown[] = [username];
@@ -353,143 +344,136 @@ export const activityQueries = {
     }
 
     const result = await db.execute(sql, params);
-    return result.rows.map(parseActivity);
+    return result.rows.map(parseRace);
   },
 
   /**
-   * Get raw activities by contributor. No points coalescing.
+   * Get raw races by organizer. No points coalescing.
    */
-  async getRawByContributor(
-    db: Database,
-    username: string,
-  ): Promise<Activity[]> {
-    const result = await db.execute(
-      `SELECT * FROM activity WHERE contributor = ?`,
-      [username],
-    );
-    return result.rows.map(parseActivity);
+  async getRawByOrganizer(db: Database, username: string): Promise<Race[]> {
+    const result = await db.execute(`SELECT * FROM race WHERE organizer = ?`, [
+      username,
+    ]);
+    return result.rows.map(parseRace);
   },
 
   /**
-   * Get activities by date range
+   * Get races by date range
    */
   async getByDateRange(
     db: Database,
     startDate: string,
     endDate: string,
-  ): Promise<Activity[]> {
+  ): Promise<Race[]> {
     const result = await db.execute(
       `SELECT 
         a.*,
         COALESCE(a.points, ad.points, 0) as points
-      FROM activity a
-      LEFT JOIN activity_definition ad ON a.activity_definition = ad.slug
+      FROM race a
+      LEFT JOIN race_definition ad ON a.race_definition = ad.slug
       WHERE a.occurred_at >= ? AND a.occurred_at <= ?
       ORDER BY a.occurred_at DESC`,
       [startDate, endDate],
     );
-    return result.rows.map(parseActivity);
+    return result.rows.map(parseRace);
   },
 
   /**
-   * Get activities by definition
+   * Get races by definition
    */
-  async getByDefinition(
-    db: Database,
-    definitionSlug: string,
-  ): Promise<Activity[]> {
+  async getByDefinition(db: Database, definitionSlug: string): Promise<Race[]> {
     const result = await db.execute(
       `SELECT 
         a.*,
         COALESCE(a.points, ad.points, 0) as points
-      FROM activity a
-      LEFT JOIN activity_definition ad ON a.activity_definition = ad.slug
-      WHERE a.activity_definition = ?
+      FROM race a
+      LEFT JOIN race_definition ad ON a.race_definition = ad.slug
+      WHERE a.race_definition = ?
       ORDER BY a.occurred_at DESC`,
       [definitionSlug],
     );
-    return result.rows.map(parseActivity);
+    return result.rows.map(parseRace);
   },
 
   /**
-   * Get activities filtered by multiple activity definitions
+   * Get races filtered by multiple race definitions
    * Optimized for streak calculation
    */
   async getByDefinitions(
     db: Database,
-    activityDefinitionSlugs: string[],
-  ): Promise<Activity[]> {
-    if (activityDefinitionSlugs.length === 0) {
+    raceDefinitionSlugs: string[],
+  ): Promise<Race[]> {
+    if (raceDefinitionSlugs.length === 0) {
       return this.getAll(db);
     }
 
-    const placeholders = activityDefinitionSlugs.map(() => "?").join(",");
+    const placeholders = raceDefinitionSlugs.map(() => "?").join(",");
     const result = await db.execute(
       `SELECT 
         a.*,
         COALESCE(a.points, ad.points, 0) as points
-      FROM activity a
-      LEFT JOIN activity_definition ad ON a.activity_definition = ad.slug
-      WHERE a.activity_definition IN (${placeholders})
+      FROM race a
+      LEFT JOIN race_definition ad ON a.race_definition = ad.slug
+      WHERE a.race_definition IN (${placeholders})
       ORDER BY a.occurred_at ASC`,
-      activityDefinitionSlugs,
+      raceDefinitionSlugs,
     );
 
-    return result.rows.map(parseActivity);
+    return result.rows.map(parseRace);
   },
 
   /**
-   * Get activities by contributor and activity definitions
+   * Get races by organizer and race definitions
    * Optimized for streak rule evaluation
    */
-  async getByContributorAndDefinitions(
+  async getByOrganizerAndDefinitions(
     db: Database,
-    contributor: string,
-    activityDefinitionSlugs: string[],
-  ): Promise<Activity[]> {
-    if (activityDefinitionSlugs.length === 0) {
-      return this.getByContributor(db, contributor);
+    organizer: string,
+    raceDefinitionSlugs: string[],
+  ): Promise<Race[]> {
+    if (raceDefinitionSlugs.length === 0) {
+      return this.getByOrganizer(db, organizer);
     }
 
-    const placeholders = activityDefinitionSlugs.map(() => "?").join(",");
+    const placeholders = raceDefinitionSlugs.map(() => "?").join(",");
     const result = await db.execute(
       `SELECT 
         a.*,
         COALESCE(a.points, ad.points, 0) as points
-      FROM activity a
-      LEFT JOIN activity_definition ad ON a.activity_definition = ad.slug
-      WHERE a.contributor = ? 
-        AND a.activity_definition IN (${placeholders})
+      FROM race a
+      LEFT JOIN race_definition ad ON a.race_definition = ad.slug
+      WHERE a.organizer = ? 
+        AND a.race_definition IN (${placeholders})
       ORDER BY a.occurred_at ASC`,
-      [contributor, ...activityDefinitionSlugs],
+      [organizer, ...raceDefinitionSlugs],
     );
 
-    return result.rows.map(parseActivity);
+    return result.rows.map(parseRace);
   },
 
   /**
-   * Get the date of the Nth activity for a contributor (sorted by occurred_at ASC).
-   * Used to determine when a contributor crossed an activity count threshold.
-   * @param offset 0-based offset (e.g., offset=9 returns the 10th activity)
-   * @param activityDefinition Optional activity definition slug to filter by
+   * Get the date of the Nth race for a organizer (sorted by occurred_at ASC).
+   * Used to determine when a organizer crossed an race count threshold.
+   * @param offset 0-based offset (e.g., offset=9 returns the 10th race)
+   * @param raceDefinition Optional race definition slug to filter by
    */
   async getDateAtOffset(
     db: Database,
-    contributor: string,
+    organizer: string,
     offset: number,
-    activityDefinition?: string,
+    raceDefinition?: string,
   ): Promise<string | null> {
-    const params: unknown[] = [contributor];
-    let whereClause = "WHERE a.contributor = ?";
-    if (activityDefinition) {
-      whereClause += " AND a.activity_definition = ?";
-      params.push(activityDefinition);
+    const params: unknown[] = [organizer];
+    let whereClause = "WHERE a.organizer = ?";
+    if (raceDefinition) {
+      whereClause += " AND a.race_definition = ?";
+      params.push(raceDefinition);
     }
     params.push(offset);
 
     const result = await db.execute(
       `SELECT a.occurred_at
-       FROM activity a
+       FROM race a
        ${whereClause}
        ORDER BY a.occurred_at ASC
        LIMIT 1 OFFSET ?`,
@@ -502,21 +486,21 @@ export const activityQueries = {
   },
 
   /**
-   * Get the date when a contributor's cumulative points crossed a threshold.
-   * Activities are sorted by occurred_at ASC and points are summed progressively.
+   * Get the date when a organizer's cumulative points crossed a threshold.
+   * Races are sorted by occurred_at ASC and points are summed progressively.
    */
   async getDateAtPointsThreshold(
     db: Database,
-    contributor: string,
+    organizer: string,
     threshold: number,
   ): Promise<string | null> {
     const result = await db.execute(
       `SELECT occurred_at, COALESCE(a.points, ad.points, 0) as points
-       FROM activity a
-       LEFT JOIN activity_definition ad ON a.activity_definition = ad.slug
-       WHERE a.contributor = ?
+       FROM race a
+       LEFT JOIN race_definition ad ON a.race_definition = ad.slug
+       WHERE a.organizer = ?
        ORDER BY a.occurred_at ASC`,
-      [contributor],
+      [organizer],
     );
 
     let cumulative = 0;
@@ -531,16 +515,16 @@ export const activityQueries = {
   },
 
   /**
-   * Insert or update activity
+   * Insert or update race
    */
-  async upsert(db: Database, activity: Activity): Promise<void> {
+  async upsert(db: Database, race: Race): Promise<void> {
     await db.execute(
-      `INSERT INTO activity (
-        slug, contributor, activity_definition, title, occurred_at, link, text, points, meta
+      `INSERT INTO race (
+        slug, organizer, race_definition, title, occurred_at, link, text, points, meta
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(slug) DO UPDATE SET
-        contributor = excluded.contributor,
-        activity_definition = excluded.activity_definition,
+        organizer = excluded.organizer,
+        race_definition = excluded.race_definition,
         title = excluded.title,
         occurred_at = excluded.occurred_at,
         link = excluded.link,
@@ -548,31 +532,31 @@ export const activityQueries = {
         points = excluded.points,
         meta = excluded.meta`,
       [
-        activity.slug,
-        activity.contributor,
-        activity.activity_definition,
-        activity.title,
-        activity.occurred_at,
-        activity.link,
-        activity.text,
-        activity.points,
-        activity.meta ? JSON.stringify(activity.meta) : null,
+        race.slug,
+        race.organizer,
+        race.race_definition,
+        race.title,
+        race.occurred_at,
+        race.link,
+        race.text,
+        race.points,
+        race.meta ? JSON.stringify(race.meta) : null,
       ],
     );
   },
 
   /**
-   * Insert or update multiple activities
+   * Insert or update multiple races
    */
-  async upsertMany(db: Database, activities: Activity[]): Promise<void> {
+  async upsertMany(db: Database, races: Race[]): Promise<void> {
     await db.batch(
-      activities.map((activity) => ({
-        sql: `INSERT INTO activity (
-        slug, contributor, activity_definition, title, occurred_at, link, text, points, meta
+      races.map((race) => ({
+        sql: `INSERT INTO race (
+        slug, organizer, race_definition, title, occurred_at, link, text, points, meta
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(slug) DO UPDATE SET
-        contributor = excluded.contributor,
-        activity_definition = excluded.activity_definition,
+        organizer = excluded.organizer,
+        race_definition = excluded.race_definition,
         title = excluded.title,
         occurred_at = excluded.occurred_at,
         link = excluded.link,
@@ -580,54 +564,54 @@ export const activityQueries = {
         points = excluded.points,
         meta = excluded.meta`,
         params: [
-          activity.slug,
-          activity.contributor,
-          activity.activity_definition,
-          activity.title,
-          activity.occurred_at,
-          activity.link,
-          activity.text,
-          activity.points,
-          activity.meta ? JSON.stringify(activity.meta) : null,
+          race.slug,
+          race.organizer,
+          race.race_definition,
+          race.title,
+          race.occurred_at,
+          race.link,
+          race.text,
+          race.points,
+          race.meta ? JSON.stringify(race.meta) : null,
         ],
       })),
     );
   },
 
   /**
-   * Delete activity
+   * Delete race
    */
   async delete(db: Database, slug: string): Promise<void> {
-    await db.execute("DELETE FROM activity WHERE slug = ?", [slug]);
+    await db.execute("DELETE FROM race WHERE slug = ?", [slug]);
   },
 
   /**
-   * Count total activities
+   * Count total races
    */
   async count(db: Database): Promise<number> {
-    const result = await db.execute("SELECT COUNT(*) as count FROM activity");
+    const result = await db.execute("SELECT COUNT(*) as count FROM race");
     return (result.rows[0] as { count: number }).count;
   },
 
   /**
-   * Get total points by contributor
+   * Get total points by organizer
    */
-  async getTotalPointsByContributor(
+  async getTotalPointsByOrganizer(
     db: Database,
     username: string,
   ): Promise<number> {
     const result = await db.execute(
       `SELECT COALESCE(SUM(COALESCE(a.points, ad.points, 0)), 0) as total 
-       FROM activity a
-       LEFT JOIN activity_definition ad ON a.activity_definition = ad.slug
-       WHERE a.contributor = ?`,
+       FROM race a
+       LEFT JOIN race_definition ad ON a.race_definition = ad.slug
+       WHERE a.organizer = ?`,
       [username],
     );
     return (result.rows[0] as { total: number }).total;
   },
 
   /**
-   * Get leaderboard (contributors ranked by points)
+   * Get leaderboard (organizers ranked by points)
    */
   async getLeaderboard(
     db: Database,
@@ -635,15 +619,15 @@ export const activityQueries = {
     startDate?: string,
     endDate?: string,
   ): Promise<
-    Array<{ contributor: string; total_points: number; activity_count: number }>
+    Array<{ organizer: string; total_points: number; race_count: number }>
   > {
     let sql = `
       SELECT 
-        a.contributor,
+        a.organizer,
         COALESCE(SUM(COALESCE(a.points, ad.points, 0)), 0) as total_points,
-        COUNT(*) as activity_count
-      FROM activity a
-      LEFT JOIN activity_definition ad ON a.activity_definition = ad.slug
+        COUNT(*) as race_count
+      FROM race a
+      LEFT JOIN race_definition ad ON a.race_definition = ad.slug
     `;
     const params: unknown[] = [];
 
@@ -652,7 +636,7 @@ export const activityQueries = {
       params.push(startDate, endDate);
     }
 
-    sql += " GROUP BY a.contributor ORDER BY total_points DESC";
+    sql += " GROUP BY a.organizer ORDER BY total_points DESC";
 
     if (limit !== undefined) {
       sql += " LIMIT ?";
@@ -661,14 +645,14 @@ export const activityQueries = {
 
     const result = await db.execute(sql, params);
     return result.rows as unknown as Array<{
-      contributor: string;
+      organizer: string;
       total_points: number;
-      activity_count: number;
+      race_count: number;
     }>;
   },
 
   /**
-   * Get leaderboard with contributor details (optimized with JOIN)
+   * Get leaderboard with organizer details (optimized with JOIN)
    */
   async getLeaderboardEnriched(
     db: Database,
@@ -681,19 +665,19 @@ export const activityQueries = {
       name: string | null;
       avatar_url: string | null;
       total_points: number;
-      activity_count: number;
+      race_count: number;
     }>
   > {
     let sql = `
       SELECT 
-        a.contributor as username,
+        a.organizer as username,
         c.name,
         c.avatar_url,
         COALESCE(SUM(COALESCE(a.points, ad.points, 0)), 0) as total_points,
-        COUNT(*) as activity_count
-      FROM activity a
-      LEFT JOIN contributor c ON a.contributor = c.username
-      LEFT JOIN activity_definition ad ON a.activity_definition = ad.slug
+        COUNT(*) as race_count
+      FROM race a
+      LEFT JOIN organizer c ON a.organizer = c.username
+      LEFT JOIN race_definition ad ON a.race_definition = ad.slug
     `;
     const params: unknown[] = [];
 
@@ -702,7 +686,7 @@ export const activityQueries = {
       params.push(startDate, endDate);
     }
 
-    sql += " GROUP BY a.contributor ORDER BY total_points DESC";
+    sql += " GROUP BY a.organizer ORDER BY total_points DESC";
 
     if (limit !== undefined) {
       sql += " LIMIT ?";
@@ -715,27 +699,27 @@ export const activityQueries = {
       name: string | null;
       avatar_url: string | null;
       total_points: number;
-      activity_count: number;
+      race_count: number;
     }>;
   },
 
   /**
-   * Get recent activities with enriched contributor and definition details
+   * Get recent races with enriched organizer and definition details
    * Optimized with JOINs to avoid separate queries
    */
-  async getRecentActivitiesEnriched(
+  async getRecentRacesEnriched(
     db: Database,
     startDate: string,
     endDate: string,
   ): Promise<
     Array<{
       slug: string;
-      contributor: string;
-      contributor_name: string | null;
-      contributor_avatar_url: string | null;
-      activity_definition: string;
-      activity_name: string;
-      activity_description: string | null;
+      organizer: string;
+      organizer_name: string | null;
+      organizer_avatar_url: string | null;
+      race_definition: string;
+      race_name: string;
+      race_description: string | null;
       title: string | null;
       occurred_at: string;
       link: string | null;
@@ -746,33 +730,33 @@ export const activityQueries = {
     const sql = `
       SELECT 
         a.slug,
-        a.contributor,
-        c.name as contributor_name,
-        c.avatar_url as contributor_avatar_url,
-        a.activity_definition,
-        ad.name as activity_name,
-        ad.description as activity_description,
+        a.organizer,
+        c.name as organizer_name,
+        c.avatar_url as organizer_avatar_url,
+        a.race_definition,
+        ad.name as race_name,
+        ad.description as race_description,
         a.title,
         a.occurred_at,
         a.link,
         a.text,
         COALESCE(a.points, ad.points, 0) as points
-      FROM activity a
-      JOIN activity_definition ad ON a.activity_definition = ad.slug
-      LEFT JOIN contributor c ON a.contributor = c.username
+      FROM race a
+      JOIN race_definition ad ON a.race_definition = ad.slug
+      LEFT JOIN organizer c ON a.organizer = c.username
       WHERE a.occurred_at >= ? AND a.occurred_at <= ?
-      ORDER BY a.activity_definition, a.occurred_at DESC
+      ORDER BY a.race_definition, a.occurred_at DESC
     `;
 
     const result = await db.execute(sql, [startDate, endDate]);
     return result.rows as unknown as Array<{
       slug: string;
-      contributor: string;
-      contributor_name: string | null;
-      contributor_avatar_url: string | null;
-      activity_definition: string;
-      activity_name: string;
-      activity_description: string | null;
+      organizer: string;
+      organizer_name: string | null;
+      organizer_avatar_url: string | null;
+      race_definition: string;
+      race_name: string;
+      race_description: string | null;
       title: string | null;
       occurred_at: string;
       link: string | null;
@@ -782,12 +766,12 @@ export const activityQueries = {
   },
 
   /**
-   * Get top contributors by specific activity type
+   * Get top organizers by specific race type
    * Optimized with JOIN and GROUP BY
    */
-  async getTopByActivityEnriched(
+  async getTopByRaceEnriched(
     db: Database,
-    activitySlug: string,
+    raceSlug: string,
     startDate?: string,
     endDate?: string,
     limit: number = 10,
@@ -802,17 +786,17 @@ export const activityQueries = {
   > {
     let sql = `
       SELECT 
-        a.contributor as username,
+        a.organizer as username,
         c.name,
         c.avatar_url,
         COALESCE(SUM(COALESCE(a.points, ad.points, 0)), 0) as points,
         COUNT(*) as count
-      FROM activity a
-      LEFT JOIN contributor c ON a.contributor = c.username
-      LEFT JOIN activity_definition ad ON a.activity_definition = ad.slug
-      WHERE a.activity_definition = ?
+      FROM race a
+      LEFT JOIN organizer c ON a.organizer = c.username
+      LEFT JOIN race_definition ad ON a.race_definition = ad.slug
+      WHERE a.race_definition = ?
     `;
-    const params: unknown[] = [activitySlug];
+    const params: unknown[] = [raceSlug];
 
     if (startDate && endDate) {
       sql += " AND a.occurred_at >= ? AND a.occurred_at <= ?";
@@ -820,7 +804,7 @@ export const activityQueries = {
     }
 
     sql += `
-      GROUP BY a.contributor
+      GROUP BY a.organizer
       ORDER BY points DESC
       LIMIT ?
     `;
@@ -837,10 +821,10 @@ export const activityQueries = {
   },
 
   /**
-   * Get activity count grouped by date for a contributor
+   * Get race count grouped by date for a organizer
    * Optimized with SQL GROUP BY
    */
-  async getActivityCountByDate(
+  async getRaceCountByDate(
     db: Database,
     username: string,
   ): Promise<Array<{ date: string; count: number }>> {
@@ -848,8 +832,8 @@ export const activityQueries = {
       SELECT 
         DATE(occurred_at) as date,
         COUNT(*) as count
-      FROM activity
-      WHERE contributor = ?
+      FROM race
+      WHERE organizer = ?
       GROUP BY DATE(occurred_at)
       ORDER BY date
     `;
@@ -973,44 +957,42 @@ export const globalAggregateQueries = {
 };
 
 /**
- * Contributor aggregate definition queries
+ * Organizer aggregate definition queries
  */
-export const contributorAggregateDefinitionQueries = {
+export const organizerAggregateDefinitionQueries = {
   /**
-   * Get all contributor aggregate definitions
+   * Get all organizer aggregate definitions
    */
-  async getAll(db: Database): Promise<ContributorAggregateDefinition[]> {
+  async getAll(db: Database): Promise<OrganizerAggregateDefinition[]> {
     const result = await db.execute(
-      "SELECT * FROM contributor_aggregate_definition ORDER BY slug",
+      "SELECT * FROM organizer_aggregate_definition ORDER BY slug",
     );
-    return result.rows as unknown as ContributorAggregateDefinition[];
+    return result.rows as unknown as OrganizerAggregateDefinition[];
   },
 
   /**
-   * Get contributor aggregate definition by slug
+   * Get organizer aggregate definition by slug
    */
   async getBySlug(
     db: Database,
     slug: string,
-  ): Promise<ContributorAggregateDefinition | null> {
+  ): Promise<OrganizerAggregateDefinition | null> {
     const result = await db.execute(
-      "SELECT * FROM contributor_aggregate_definition WHERE slug = ?",
+      "SELECT * FROM organizer_aggregate_definition WHERE slug = ?",
       [slug],
     );
-    return (
-      (result.rows[0] as unknown as ContributorAggregateDefinition) || null
-    );
+    return (result.rows[0] as unknown as OrganizerAggregateDefinition) || null;
   },
 
   /**
-   * Insert or ignore contributor aggregate definition
+   * Insert or ignore organizer aggregate definition
    */
   async insertOrIgnore(
     db: Database,
-    definition: ContributorAggregateDefinition,
+    definition: OrganizerAggregateDefinition,
   ): Promise<void> {
     await db.execute(
-      `INSERT OR IGNORE INTO contributor_aggregate_definition (slug, name, description, hidden)
+      `INSERT OR IGNORE INTO organizer_aggregate_definition (slug, name, description, hidden)
        VALUES (?, ?, ?, ?)`,
       [
         definition.slug,
@@ -1022,14 +1004,14 @@ export const contributorAggregateDefinitionQueries = {
   },
 
   /**
-   * Insert or update contributor aggregate definition
+   * Insert or update organizer aggregate definition
    */
   async upsert(
     db: Database,
-    definition: ContributorAggregateDefinition,
+    definition: OrganizerAggregateDefinition,
   ): Promise<void> {
     await db.execute(
-      `INSERT INTO contributor_aggregate_definition (slug, name, description, hidden)
+      `INSERT INTO organizer_aggregate_definition (slug, name, description, hidden)
        VALUES (?, ?, ?, ?)
        ON CONFLICT(slug) DO UPDATE SET
          name = excluded.name,
@@ -1045,62 +1027,62 @@ export const contributorAggregateDefinitionQueries = {
   },
 
   /**
-   * Get all visible contributor aggregate definitions (not hidden)
+   * Get all visible organizer aggregate definitions (not hidden)
    */
-  async getAllVisible(db: Database): Promise<ContributorAggregateDefinition[]> {
+  async getAllVisible(db: Database): Promise<OrganizerAggregateDefinition[]> {
     const result = await db.execute(
-      "SELECT * FROM contributor_aggregate_definition WHERE hidden = FALSE OR hidden IS NULL ORDER BY slug",
+      "SELECT * FROM organizer_aggregate_definition WHERE hidden = FALSE OR hidden IS NULL ORDER BY slug",
     );
-    return result.rows as unknown as ContributorAggregateDefinition[];
+    return result.rows as unknown as OrganizerAggregateDefinition[];
   },
 };
 
 /**
- * Contributor aggregate queries
+ * Organizer aggregate queries
  */
-export const contributorAggregateQueries = {
+export const organizerAggregateQueries = {
   /**
-   * Get all contributor aggregates
+   * Get all organizer aggregates
    */
-  async getAll(db: Database): Promise<ContributorAggregate[]> {
+  async getAll(db: Database): Promise<OrganizerAggregate[]> {
     const result = await db.execute(
-      "SELECT * FROM contributor_aggregate ORDER BY contributor, aggregate",
+      "SELECT * FROM organizer_aggregate ORDER BY organizer, aggregate",
     );
     return result.rows.map((row: any) => ({
       ...row,
       value: JSON.parse(row.value as string),
       meta: row.meta ? JSON.parse(row.meta as string) : null,
-    })) as ContributorAggregate[];
+    })) as OrganizerAggregate[];
   },
 
   /**
-   * Get aggregates for a specific contributor
+   * Get aggregates for a specific organizer
    */
-  async getByContributor(
+  async getByOrganizer(
     db: Database,
     username: string,
-  ): Promise<ContributorAggregate[]> {
+  ): Promise<OrganizerAggregate[]> {
     const result = await db.execute(
-      "SELECT * FROM contributor_aggregate WHERE contributor = ? ORDER BY aggregate",
+      "SELECT * FROM organizer_aggregate WHERE organizer = ? ORDER BY aggregate",
       [username],
     );
     return result.rows.map((row: any) => ({
       ...row,
       value: JSON.parse(row.value as string),
       meta: row.meta ? JSON.parse(row.meta as string) : null,
-    })) as ContributorAggregate[];
+    })) as OrganizerAggregate[];
   },
 
   /**
-   * Get a specific aggregate for a contributor
+   * Get a specific aggregate for a organizer
    */
-  async getByContributorAndAggregate(
+  async getByOrganizerAndAggregate(
     db: Database,
     username: string,
     aggregateSlug: string,
-  ): Promise<ContributorAggregate | null> {
+  ): Promise<OrganizerAggregate | null> {
     const result = await db.execute(
-      "SELECT * FROM contributor_aggregate WHERE contributor = ? AND aggregate = ?",
+      "SELECT * FROM organizer_aggregate WHERE organizer = ? AND aggregate = ?",
       [username, aggregateSlug],
     );
     if (result.rows.length === 0) return null;
@@ -1109,22 +1091,22 @@ export const contributorAggregateQueries = {
       ...row,
       value: JSON.parse(row.value as string),
       meta: row.meta ? JSON.parse(row.meta as string) : null,
-    } as ContributorAggregate;
+    } as OrganizerAggregate;
   },
 
   /**
-   * Insert or update contributor aggregate
+   * Insert or update organizer aggregate
    */
-  async upsert(db: Database, aggregate: ContributorAggregate): Promise<void> {
+  async upsert(db: Database, aggregate: OrganizerAggregate): Promise<void> {
     await db.execute(
-      `INSERT INTO contributor_aggregate (aggregate, contributor, value, meta)
+      `INSERT INTO organizer_aggregate (aggregate, organizer, value, meta)
        VALUES (?, ?, ?, ?)
-       ON CONFLICT(aggregate, contributor) DO UPDATE SET
+       ON CONFLICT(aggregate, organizer) DO UPDATE SET
          value = excluded.value,
          meta = excluded.meta`,
       [
         aggregate.aggregate,
-        aggregate.contributor,
+        aggregate.organizer,
         JSON.stringify(aggregate.value),
         aggregate.meta ? JSON.stringify(aggregate.meta) : null,
       ],
@@ -1132,7 +1114,7 @@ export const contributorAggregateQueries = {
   },
 
   /**
-   * Delete contributor aggregate
+   * Delete organizer aggregate
    */
   async delete(
     db: Database,
@@ -1140,33 +1122,32 @@ export const contributorAggregateQueries = {
     aggregateSlug: string,
   ): Promise<void> {
     await db.execute(
-      "DELETE FROM contributor_aggregate WHERE contributor = ? AND aggregate = ?",
+      "DELETE FROM organizer_aggregate WHERE organizer = ? AND aggregate = ?",
       [username, aggregateSlug],
     );
   },
 
   /**
-   * Delete all aggregates for a contributor
+   * Delete all aggregates for a organizer
    */
-  async deleteByContributor(db: Database, username: string): Promise<void> {
-    await db.execute(
-      "DELETE FROM contributor_aggregate WHERE contributor = ?",
-      [username],
-    );
+  async deleteByOrganizer(db: Database, username: string): Promise<void> {
+    await db.execute("DELETE FROM organizer_aggregate WHERE organizer = ?", [
+      username,
+    ]);
   },
 
   /**
-   * Get contributors where aggregate value meets threshold
+   * Get organizers where aggregate value meets threshold
    * Optimized for threshold-based badge rules
    */
-  async getContributorsAboveThreshold(
+  async getOrganizersAboveThreshold(
     db: Database,
     aggregateSlug: string,
     minValue: number,
-  ): Promise<Array<{ contributor: string; value: number }>> {
+  ): Promise<Array<{ organizer: string; value: number }>> {
     const result = await db.execute(
-      `SELECT contributor, value
-       FROM contributor_aggregate
+      `SELECT organizer, value
+       FROM organizer_aggregate
        WHERE aggregate = ? 
          AND json_extract(value, '$.value') >= ?
          AND json_extract(value, '$.type') = 'number'
@@ -1175,36 +1156,36 @@ export const contributorAggregateQueries = {
     );
 
     return result.rows.map((row: any) => ({
-      contributor: row.contributor as string,
+      organizer: row.organizer as string,
       value: JSON.parse(row.value as string).value as number,
     }));
   },
 
   /**
-   * Get contributors with specific aggregate (for composite rules)
+   * Get organizers with specific aggregate (for composite rules)
    */
-  async getContributorsWithAggregate(
+  async getOrganizersWithAggregate(
     db: Database,
     aggregateSlug: string,
-  ): Promise<Array<{ contributor: string; value: AggregateValue }>> {
+  ): Promise<Array<{ organizer: string; value: AggregateValue }>> {
     const result = await db.execute(
-      `SELECT contributor, value
-       FROM contributor_aggregate
+      `SELECT organizer, value
+       FROM organizer_aggregate
        WHERE aggregate = ?`,
       [aggregateSlug],
     );
 
     return result.rows.map((row: any) => ({
-      contributor: row.contributor as string,
+      organizer: row.organizer as string,
       value: JSON.parse(row.value as string) as AggregateValue,
     }));
   },
 
   /**
-   * Get contributor aggregates enriched with definition details
+   * Get organizer aggregates enriched with definition details
    * Optimized with JOIN and filtering
    */
-  async getByContributorEnriched(
+  async getByOrganizerEnriched(
     db: Database,
     username: string,
     slugs: string[],
@@ -1227,9 +1208,9 @@ export const contributorAggregateQueries = {
         cad.name,
         ca.value,
         cad.description
-      FROM contributor_aggregate ca
-      JOIN contributor_aggregate_definition cad ON ca.aggregate = cad.slug
-      WHERE ca.contributor = ?
+      FROM organizer_aggregate ca
+      JOIN organizer_aggregate_definition cad ON ca.aggregate = cad.slug
+      WHERE ca.organizer = ?
         AND ca.aggregate IN (${placeholders})
         AND (cad.hidden = FALSE OR cad.hidden IS NULL)
       ORDER BY ca.aggregate
@@ -1316,51 +1297,51 @@ export const badgeDefinitionQueries = {
 };
 
 /**
- * Contributor badge queries
+ * Organizer badge queries
  */
-export const contributorBadgeQueries = {
+export const organizerBadgeQueries = {
   /**
-   * Get all contributor badges
+   * Get all organizer badges
    */
-  async getAll(db: Database): Promise<ContributorBadge[]> {
+  async getAll(db: Database): Promise<OrganizerBadge[]> {
     const result = await db.execute(
-      "SELECT * FROM contributor_badge ORDER BY achieved_on DESC",
+      "SELECT * FROM organizer_badge ORDER BY achieved_on DESC",
     );
     return result.rows.map((row: any) => ({
       ...row,
       meta: row.meta ? JSON.parse(row.meta as string) : null,
-    })) as ContributorBadge[];
+    })) as OrganizerBadge[];
   },
 
   /**
-   * Get badges for a specific contributor
+   * Get badges for a specific organizer
    */
-  async getByContributor(
+  async getByOrganizer(
     db: Database,
     username: string,
-  ): Promise<ContributorBadge[]> {
+  ): Promise<OrganizerBadge[]> {
     const result = await db.execute(
-      "SELECT * FROM contributor_badge WHERE contributor = ? ORDER BY achieved_on DESC",
+      "SELECT * FROM organizer_badge WHERE organizer = ? ORDER BY achieved_on DESC",
       [username],
     );
     return result.rows.map((row: any) => ({
       ...row,
       meta: row.meta ? JSON.parse(row.meta as string) : null,
-    })) as ContributorBadge[];
+    })) as OrganizerBadge[];
   },
 
   /**
-   * Get a specific badge for a contributor
+   * Get a specific badge for a organizer
    */
-  async getByContributorAndBadge(
+  async getByOrganizerAndBadge(
     db: Database,
     username: string,
     badgeSlug: string,
     variant?: string,
-  ): Promise<ContributorBadge | null> {
+  ): Promise<OrganizerBadge | null> {
     const query = variant
-      ? "SELECT * FROM contributor_badge WHERE contributor = ? AND badge = ? AND variant = ?"
-      : "SELECT * FROM contributor_badge WHERE contributor = ? AND badge = ?";
+      ? "SELECT * FROM organizer_badge WHERE organizer = ? AND badge = ? AND variant = ?"
+      : "SELECT * FROM organizer_badge WHERE organizer = ? AND badge = ?";
     const params = variant
       ? [username, badgeSlug, variant]
       : [username, badgeSlug];
@@ -1370,11 +1351,11 @@ export const contributorBadgeQueries = {
     return {
       ...row,
       meta: row.meta ? JSON.parse(row.meta as string) : null,
-    } as ContributorBadge;
+    } as OrganizerBadge;
   },
 
   /**
-   * Check if a contributor has a specific badge variant
+   * Check if a organizer has a specific badge variant
    */
   async exists(
     db: Database,
@@ -1383,23 +1364,23 @@ export const contributorBadgeQueries = {
     variant: string,
   ): Promise<boolean> {
     const result = await db.execute(
-      "SELECT COUNT(*) as count FROM contributor_badge WHERE contributor = ? AND badge = ? AND variant = ?",
+      "SELECT COUNT(*) as count FROM organizer_badge WHERE organizer = ? AND badge = ? AND variant = ?",
       [username, badgeSlug, variant],
     );
     return (result.rows[0] as { count: number }).count > 0;
   },
 
   /**
-   * Award a badge to a contributor
+   * Award a badge to a organizer
    */
-  async award(db: Database, badge: ContributorBadge): Promise<void> {
+  async award(db: Database, badge: OrganizerBadge): Promise<void> {
     await db.execute(
-      `INSERT OR IGNORE INTO contributor_badge (slug, badge, contributor, variant, achieved_on, meta)
+      `INSERT OR IGNORE INTO organizer_badge (slug, badge, organizer, variant, achieved_on, meta)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
         badge.slug,
         badge.badge,
-        badge.contributor,
+        badge.organizer,
         badge.variant,
         badge.achieved_on,
         badge.meta ? JSON.stringify(badge.meta) : null,
@@ -1408,7 +1389,7 @@ export const contributorBadgeQueries = {
   },
 
   /**
-   * Upgrade a badge variant for a contributor
+   * Upgrade a badge variant for a organizer
    */
   async upgrade(
     db: Database,
@@ -1418,7 +1399,7 @@ export const contributorBadgeQueries = {
     achievedOn?: string,
   ): Promise<void> {
     await db.execute(
-      `UPDATE contributor_badge 
+      `UPDATE organizer_badge 
        SET variant = ?, achieved_on = ?, meta = ?
        WHERE slug = ?`,
       [
@@ -1431,17 +1412,17 @@ export const contributorBadgeQueries = {
   },
 
   /**
-   * Delete a contributor badge
+   * Delete a organizer badge
    */
   async delete(db: Database, slug: string): Promise<void> {
-    await db.execute("DELETE FROM contributor_badge WHERE slug = ?", [slug]);
+    await db.execute("DELETE FROM organizer_badge WHERE slug = ?", [slug]);
   },
 
   /**
-   * Delete all badges for a contributor
+   * Delete all badges for a organizer
    */
-  async deleteByContributor(db: Database, username: string): Promise<void> {
-    await db.execute("DELETE FROM contributor_badge WHERE contributor = ?", [
+  async deleteByOrganizer(db: Database, username: string): Promise<void> {
+    await db.execute("DELETE FROM organizer_badge WHERE organizer = ?", [
       username,
     ]);
   },
@@ -1457,12 +1438,12 @@ export const contributorBadgeQueries = {
     Array<{
       slug: string;
       badge: string;
-      contributor: string;
+      organizer: string;
       variant: string;
       achieved_on: string;
       meta: Record<string, unknown> | null;
-      contributor_name: string | null;
-      contributor_avatar_url: string | null;
+      organizer_name: string | null;
+      organizer_avatar_url: string | null;
       badge_name: string;
       badge_description: string;
       badge_variants: Record<string, { description: string; svg_url: string }>;
@@ -1472,17 +1453,17 @@ export const contributorBadgeQueries = {
       SELECT 
         cb.slug,
         cb.badge,
-        cb.contributor,
+        cb.organizer,
         cb.variant,
         cb.achieved_on,
         cb.meta,
-        c.name as contributor_name,
-        c.avatar_url as contributor_avatar_url,
+        c.name as organizer_name,
+        c.avatar_url as organizer_avatar_url,
         bd.name as badge_name,
         bd.description as badge_description,
         bd.variants as badge_variants
-      FROM contributor_badge cb
-      JOIN contributor c ON cb.contributor = c.username
+      FROM organizer_badge cb
+      JOIN organizer c ON cb.organizer = c.username
       JOIN badge_definition bd ON cb.badge = bd.slug
       ORDER BY cb.achieved_on DESC
       LIMIT ?
@@ -1492,12 +1473,12 @@ export const contributorBadgeQueries = {
     return result.rows.map((row: any) => ({
       slug: row.slug,
       badge: row.badge,
-      contributor: row.contributor,
+      organizer: row.organizer,
       variant: row.variant,
       achieved_on: row.achieved_on,
       meta: row.meta ? JSON.parse(row.meta as string) : null,
-      contributor_name: row.contributor_name,
-      contributor_avatar_url: row.contributor_avatar_url,
+      organizer_name: row.organizer_name,
+      organizer_avatar_url: row.organizer_avatar_url,
       badge_name: row.badge_name,
       badge_description: row.badge_description,
       badge_variants: JSON.parse(row.badge_variants as string),
@@ -1505,7 +1486,7 @@ export const contributorBadgeQueries = {
   },
 
   /**
-   * Get top badge earners with enriched contributor details
+   * Get top badge earners with enriched organizer details
    * Optimized with GROUP BY and JOIN
    */
   async getTopEarnersEnriched(
@@ -1525,8 +1506,8 @@ export const contributorBadgeQueries = {
         c.name,
         c.avatar_url,
         COUNT(cb.slug) as badge_count
-      FROM contributor c
-      JOIN contributor_badge cb ON c.username = cb.contributor
+      FROM organizer c
+      JOIN organizer_badge cb ON c.username = cb.organizer
       GROUP BY c.username
       ORDER BY badge_count DESC
       LIMIT ?
@@ -1543,7 +1524,7 @@ export const contributorBadgeQueries = {
 
   /**
    * Get award counts grouped by badge definition slug
-   * Returns how many contributors earned each badge (and each variant)
+   * Returns how many organizers earned each badge (and each variant)
    */
   async getAwardCountsByBadge(db: Database): Promise<
     Array<{
@@ -1557,8 +1538,8 @@ export const contributorBadgeQueries = {
         cb.badge,
         cb.variant,
         COUNT(*) as award_count
-      FROM contributor_badge cb
-      JOIN contributor c ON cb.contributor = c.username
+      FROM organizer_badge cb
+      JOIN organizer c ON cb.organizer = c.username
       GROUP BY cb.badge, cb.variant
       ORDER BY cb.badge, award_count DESC
     `;
@@ -1581,9 +1562,9 @@ export const contributorBadgeQueries = {
     const sql = `
       SELECT 
         COUNT(cb.slug) as total_awarded,
-        COUNT(DISTINCT cb.contributor) as unique_earners
-      FROM contributor_badge cb
-      JOIN contributor c ON cb.contributor = c.username
+        COUNT(DISTINCT cb.organizer) as unique_earners
+      FROM organizer_badge cb
+      JOIN organizer c ON cb.organizer = c.username
     `;
 
     const result = await db.execute(sql);

@@ -1,6 +1,6 @@
 # MCP Server
 
-A Model Context Protocol (MCP) server for querying the generated data. This server exposes tools for querying contributors, activities, badges, and aggregates through a standardized MCP interface.
+A Model Context Protocol (MCP) server for querying the generated data. This server exposes tools for querying organizers, races, badges, and aggregates through a standardized MCP interface.
 
 ## What is MCP?
 
@@ -9,8 +9,8 @@ The Model Context Protocol (MCP) is an open protocol created by Anthropic that s
 ## Features
 
 - **20+ Query Tools**: Comprehensive set of tools for querying all aspects of the data
-- **Batch Operations**: Support for querying multiple contributors or stats in a single request
-- **Flexible Filtering**: Filter by date range, activity type, and more
+- **Batch Operations**: Support for querying multiple organizers or stats in a single request
+- **Flexible Filtering**: Filter by date range, race type, and more
 - **Multiple Transports**: Support for both STDIO (for local use) and HTTP transports
 - **Read-Only**: Safe, read-only access to the data
 - **Zero Configuration**: Works out of the box with sensible defaults
@@ -73,40 +73,40 @@ After configuration, restart Claude Desktop. The server will be available and Cl
 
 ## Available Tools
 
-### Contributor Tools
+### Organizer Tools
 
-- **query_contributors**: Query contributors with pagination
-- **get_contributor**: Get detailed information about a specific contributor
-- **get_contributor_stats**: Get comprehensive statistics for a contributor including activities, badges, and aggregates
-- **batch_get_contributors**: Get multiple contributors in a single batch request
+- **query_organizers**: Query organizers with pagination
+- **get_organizer**: Get detailed information about a specific organizer
+- **get_organizer_stats**: Get comprehensive statistics for a organizer including races, badges, and aggregates
+- **batch_get_organizers**: Get multiple organizers in a single batch request
 
-### Activity Tools
+### Race Tools
 
-- **query_activities**: Query activities with flexible filtering by contributor, activity type, and date range
-- **get_activity**: Get a specific activity by slug
-- **get_activity_definitions**: Get activity definitions (types of activities tracked)
-- **get_activity_timeline**: Get activity timeline for a contributor grouped by time period
-- **search_activities**: Search activities by title or text content
+- **query_races**: Query races with flexible filtering by organizer, race type, and date range
+- **get_race**: Get a specific race by slug
+- **get_race_definitions**: Get race definitions (types of races tracked)
+- **get_race_timeline**: Get race timeline for a organizer grouped by time period
+- **search_races**: Search races by title or text content
 
 ### Badge Tools
 
-- **get_badges**: Get badge definitions or contributor badges
+- **get_badges**: Get badge definitions or organizer badges
 - **get_recent_badges**: Get recently awarded badges
-- **get_top_badge_earners**: Get contributors with the most badges
+- **get_top_badge_earners**: Get organizers with the most badges
 
 ### Aggregate Tools
 
 - **get_global_aggregates**: Get organization-level aggregate metrics
-- **get_contributor_aggregates**: Get aggregates for a specific contributor
-- **get_aggregate_definitions**: Get contributor aggregate definitions
-- **batch_get_contributor_stats**: Get statistics for multiple contributors in batch
+- **get_organizer_aggregates**: Get aggregates for a specific organizer
+- **get_aggregate_definitions**: Get organizer aggregate definitions
+- **batch_get_organizer_stats**: Get statistics for multiple organizers in batch
 
 ## Example Queries
 
 Here are some example natural language queries you can ask Claude:
 
-- "Show me the top 10 contributors this month"
-- "What activities did alice complete last week?"
+- "Show me the top 10 organizers this month"
+- "What races did alice complete last week?"
 - "Who has earned the most badges?"
 - "Get me detailed stats for user john_doe"
 - "Find all pull requests merged in January 2024"
@@ -134,7 +134,7 @@ Options:
 
 ## Tool Schemas
 
-All tools accept and return structured JSON data. Input parameters are validated using Zod schemas. Here's an example of the `get_contributor_stats` tool:
+All tools accept and return structured JSON data. Input parameters are validated using Zod schemas. Here's an example of the `get_organizer_stats` tool:
 
 **Input:**
 
@@ -148,7 +148,7 @@ All tools accept and return structured JSON data. Input parameters are validated
 
 ```json
 {
-  "contributor": {
+  "organizer": {
     "username": "alice",
     "name": "Alice Smith",
     "avatar_url": "https://...",
@@ -156,13 +156,13 @@ All tools accept and return structured JSON data. Input parameters are validated
   },
   "stats": {
     "totalPoints": 1250,
-    "activityCount": 45,
+    "raceCount": 45,
     "badgeCount": 5
   },
-  "recentActivities": [...],
+  "recentRaces": [...],
   "aggregates": [...],
   "badges": [...],
-  "activityByDate": [...]
+  "raceByDate": [...]
 }
 ```
 
@@ -252,7 +252,7 @@ pnpm dev:http
 
 ### Tools return empty results
 
-1. Verify the database contains data by running: `sqlite3 data/.leaderboard.db "SELECT COUNT(*) FROM contributor"`
+1. Verify the database contains data by running: `sqlite3 data/.leaderboard.db "SELECT COUNT(*) FROM organizer"`
 2. Check that the data directory path is correct
 3. Try querying without filters first
 

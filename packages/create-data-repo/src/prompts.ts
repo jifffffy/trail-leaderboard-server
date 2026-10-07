@@ -71,7 +71,7 @@ export async function collectConfig(): Promise<DataRepoConfig> {
       type: "text",
       name: "metaDescription",
       message: "Site description:",
-      initial: `${orgInfo.orgName} activity site`,
+      initial: `${orgInfo.orgName} race site`,
       validate: validateRequired,
     },
     {

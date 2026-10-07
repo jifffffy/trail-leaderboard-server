@@ -31,8 +31,8 @@ data-repo/
 ├── config.yaml           # Organization configuration
 ├── README.md            # Repository documentation
 ├── .gitignore           # Git ignore rules
-├── contributors/        # Contributor profiles (empty)
-└── activities/          # Activity records (empty)
+├── organizers/        # Organizer profiles (empty)
+└── races/          # Race records (empty)
 ```
 
 ## License

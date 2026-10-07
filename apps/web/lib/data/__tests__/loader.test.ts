@@ -3,25 +3,25 @@
  */
 
 import {
-  activityDefinitionQueries,
-  activityQueries,
-  contributorQueries,
   createDatabase,
   initializeSchema,
+  organizerQueries,
+  raceDefinitionQueries,
+  raceQueries,
   type Database,
 } from "@starter/leaderboard-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  getActivities,
-  getAllActivityDefinitions,
-  getAllContributors,
-  getAllContributorsWithAvatars,
-  getAllContributorUsernames,
-  getContributor,
-  getContributorProfile,
-  getContributorStats,
-  listActivityDefinitions,
+  getAllOrganizers,
+  getAllOrganizersWithAvatars,
+  getAllOrganizerUsernames,
+  getAllRaceDefinitions,
+  getOrganizer,
+  getOrganizerProfile,
+  getOrganizerStats,
+  getRaces,
+  listRaceDefinitions,
 } from "../loader";
 
 // Mock the database client
@@ -38,7 +38,7 @@ describe("Data Loader", () => {
     await initializeSchema(db);
 
     // Set up test data
-    await contributorQueries.upsert(db, {
+    await organizerQueries.upsert(db, {
       username: "alice",
       name: "Alice Smith",
       title: "Engineer",
@@ -48,7 +48,7 @@ describe("Data Loader", () => {
       meta: null,
     });
 
-    await contributorQueries.upsert(db, {
+    await organizerQueries.upsert(db, {
       username: "bob",
       name: "Bob Jones",
       title: null,
@@ -58,7 +58,7 @@ describe("Data Loader", () => {
       meta: null,
     });
 
-    await activityDefinitionQueries.insertOrIgnore(db, {
+    await raceDefinitionQueries.insertOrIgnore(db, {
       slug: "entry_created",
       name: "Entry Created",
       description: "Created an entry",
@@ -66,7 +66,7 @@ describe("Data Loader", () => {
       icon: "plus-circle",
     });
 
-    await activityDefinitionQueries.insertOrIgnore(db, {
+    await raceDefinitionQueries.insertOrIgnore(db, {
       slug: "comment_added",
       name: "Comment Added",
       description: "Added a comment",
@@ -78,10 +78,10 @@ describe("Data Loader", () => {
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    await activityQueries.upsert(db, {
+    await raceQueries.upsert(db, {
       slug: "alice-1",
-      contributor: "alice",
-      activity_definition: "entry_created",
+      organizer: "alice",
+      race_definition: "entry_created",
       title: "First entry",
       occurred_at: now.toISOString(),
       link: "https://example.com/entries/1",
@@ -90,10 +90,10 @@ describe("Data Loader", () => {
       meta: null,
     });
 
-    await activityQueries.upsert(db, {
+    await raceQueries.upsert(db, {
       slug: "alice-2",
-      contributor: "alice",
-      activity_definition: "entry_created",
+      organizer: "alice",
+      race_definition: "entry_created",
       title: "Second entry",
       occurred_at: yesterday.toISOString(),
       link: "https://example.com/entries/2",
@@ -102,10 +102,10 @@ describe("Data Loader", () => {
       meta: null,
     });
 
-    await activityQueries.upsert(db, {
+    await raceQueries.upsert(db, {
       slug: "bob-1",
-      contributor: "bob",
-      activity_definition: "comment_added",
+      organizer: "bob",
+      race_definition: "comment_added",
       title: "A comment",
       occurred_at: now.toISOString(),
       link: "https://example.com/entries/1#c",
@@ -119,33 +119,33 @@ describe("Data Loader", () => {
     await db.close();
   });
 
-  describe("getAllContributors", () => {
-    it("should return all contributors", async () => {
-      const contributors = await getAllContributors();
-      expect(contributors).toHaveLength(2);
-      expect(contributors.map((c) => c.username).sort()).toEqual([
+  describe("getAllOrganizers", () => {
+    it("should return all organizers", async () => {
+      const organizers = await getAllOrganizers();
+      expect(organizers).toHaveLength(2);
+      expect(organizers.map((c) => c.username).sort()).toEqual([
         "alice",
         "bob",
       ]);
     });
   });
 
-  describe("getContributor", () => {
-    it("should return a specific contributor", async () => {
-      const contributor = await getContributor("alice");
-      expect(contributor).not.toBeNull();
-      expect(contributor?.name).toBe("Alice Smith");
+  describe("getOrganizer", () => {
+    it("should return a specific organizer", async () => {
+      const organizer = await getOrganizer("alice");
+      expect(organizer).not.toBeNull();
+      expect(organizer?.name).toBe("Alice Smith");
     });
 
-    it("should return null for non-existent contributor", async () => {
-      const contributor = await getContributor("nonexistent");
-      expect(contributor).toBeNull();
+    it("should return null for non-existent organizer", async () => {
+      const organizer = await getOrganizer("nonexistent");
+      expect(organizer).toBeNull();
     });
   });
 
-  describe("getAllActivityDefinitions", () => {
-    it("should return all activity definitions", async () => {
-      const definitions = await getAllActivityDefinitions();
+  describe("getAllRaceDefinitions", () => {
+    it("should return all race definitions", async () => {
+      const definitions = await getAllRaceDefinitions();
       expect(definitions).toHaveLength(2);
       expect(definitions.map((d) => d.slug).sort()).toEqual([
         "comment_added",
@@ -154,94 +154,94 @@ describe("Data Loader", () => {
     });
   });
 
-  describe("getActivities", () => {
-    it("should return all activities", async () => {
-      const activities = await getActivities();
-      expect(activities).toHaveLength(3);
+  describe("getRaces", () => {
+    it("should return all races", async () => {
+      const races = await getRaces();
+      expect(races).toHaveLength(3);
     });
 
-    it("should filter by contributor", async () => {
-      const activities = await getActivities({ contributor: "alice" });
-      expect(activities).toHaveLength(2);
-      expect(activities.every((a) => a.contributor === "alice")).toBe(true);
+    it("should filter by organizer", async () => {
+      const races = await getRaces({ organizer: "alice" });
+      expect(races).toHaveLength(2);
+      expect(races.every((a) => a.organizer === "alice")).toBe(true);
     });
 
     it("should limit results", async () => {
-      const activities = await getActivities({ limit: 2 });
-      expect(activities).toHaveLength(2);
+      const races = await getRaces({ limit: 2 });
+      expect(races).toHaveLength(2);
     });
   });
 
-  describe("getContributorStats", () => {
-    it("should return contributor stats", async () => {
-      const stats = await getContributorStats("alice");
+  describe("getOrganizerStats", () => {
+    it("should return organizer stats", async () => {
+      const stats = await getOrganizerStats("alice");
 
       expect(stats.totalPoints).toBe(20); // 2 entries x 10 points
-      expect(stats.activityCount).toBe(2);
-      expect(stats.activities).toHaveLength(2);
+      expect(stats.raceCount).toBe(2);
+      expect(stats.races).toHaveLength(2);
     });
   });
 
-  describe("getAllContributorUsernames", () => {
+  describe("getAllOrganizerUsernames", () => {
     it("should return all usernames", async () => {
-      const usernames = await getAllContributorUsernames();
+      const usernames = await getAllOrganizerUsernames();
       expect(usernames).toHaveLength(2);
       expect(usernames.sort()).toEqual(["alice", "bob"]);
     });
   });
 
-  describe("getContributorProfile", () => {
-    it("should return complete contributor profile", async () => {
-      const profile = await getContributorProfile("alice");
+  describe("getOrganizerProfile", () => {
+    it("should return complete organizer profile", async () => {
+      const profile = await getOrganizerProfile("alice");
 
-      expect(profile.contributor).not.toBeNull();
-      expect(profile.contributor?.username).toBe("alice");
+      expect(profile.organizer).not.toBeNull();
+      expect(profile.organizer?.username).toBe("alice");
       expect(profile.totalPoints).toBe(20);
-      expect(profile.activities).toHaveLength(2);
-      expect(Object.keys(profile.activityByDate).length).toBeGreaterThan(0);
+      expect(profile.races).toHaveLength(2);
+      expect(Object.keys(profile.raceByDate).length).toBeGreaterThan(0);
     });
 
-    it("should return null for non-existent contributor", async () => {
-      const profile = await getContributorProfile("nonexistent");
+    it("should return null for non-existent organizer", async () => {
+      const profile = await getOrganizerProfile("nonexistent");
 
-      expect(profile.contributor).toBeNull();
-      expect(profile.activities).toHaveLength(0);
+      expect(profile.organizer).toBeNull();
+      expect(profile.races).toHaveLength(0);
       expect(profile.totalPoints).toBe(0);
     });
 
-    it("should enrich activities with definition names", async () => {
-      const profile = await getContributorProfile("alice");
+    it("should enrich races with definition names", async () => {
+      const profile = await getOrganizerProfile("alice");
 
-      expect(profile.activities[0]).toHaveProperty("activity_name");
-      expect(profile.activities[0].activity_name).toBe("Entry Created");
+      expect(profile.races[0]).toHaveProperty("race_name");
+      expect(profile.races[0].race_name).toBe("Entry Created");
     });
   });
 
-  describe("listActivityDefinitions", () => {
-    it("should list all activity definitions", async () => {
-      const definitions = await listActivityDefinitions();
+  describe("listRaceDefinitions", () => {
+    it("should list all race definitions", async () => {
+      const definitions = await listRaceDefinitions();
       expect(definitions).toHaveLength(2);
       expect(definitions[0]).toHaveProperty("slug");
       expect(definitions[0]).toHaveProperty("name");
     });
   });
 
-  describe("getAllContributorsWithAvatars", () => {
-    it("should return contributors with avatars and points", async () => {
-      const contributors = await getAllContributorsWithAvatars();
+  describe("getAllOrganizersWithAvatars", () => {
+    it("should return organizers with avatars and points", async () => {
+      const organizers = await getAllOrganizersWithAvatars();
 
-      expect(contributors).toHaveLength(2);
-      expect(contributors[0]).toHaveProperty("username");
-      expect(contributors[0]).toHaveProperty("avatar_url");
-      expect(contributors[0]).toHaveProperty("totalPoints");
+      expect(organizers).toHaveLength(2);
+      expect(organizers[0]).toHaveProperty("username");
+      expect(organizers[0]).toHaveProperty("avatar_url");
+      expect(organizers[0]).toHaveProperty("totalPoints");
     });
 
     it("should sort by total points descending", async () => {
-      const contributors = await getAllContributorsWithAvatars();
+      const organizers = await getAllOrganizersWithAvatars();
 
-      expect(contributors[0].username).toBe("alice");
-      expect(contributors[0].totalPoints).toBeGreaterThan(
-        contributors[1].totalPoints,
+      expect(organizers[0].username).toBe("alice");
+      expect(organizers[0].totalPoints).toBeGreaterThan(
+        organizers[1].totalPoints,
       );
     });
   });

@@ -4,9 +4,9 @@
 
 import type { Database, Logger } from "@starter/leaderboard-api";
 import {
-  contributorAggregateDefinitionQueries,
-  contributorAggregateQueries,
   globalAggregateQueries,
+  organizerAggregateDefinitionQueries,
+  organizerAggregateQueries,
 } from "@starter/leaderboard-api";
 import { readFile, readdir } from "fs/promises";
 import { join } from "path";
@@ -45,9 +45,9 @@ export async function importGlobalAggregates(
 }
 
 /**
- * Import contributor aggregate definitions from aggregates/definitions.json
+ * Import organizer aggregate definitions from aggregates/definitions.json
  */
-export async function importContributorAggregateDefinitions(
+export async function importOrganizerAggregateDefinitions(
   db: Database,
   dataDir: string,
   logger: Logger,
@@ -59,55 +59,55 @@ export async function importContributorAggregateDefinitions(
     const definitions = JSON.parse(content);
 
     if (!Array.isArray(definitions)) {
-      logger.warn("Contributor aggregate definitions file is not an array");
+      logger.warn("Organizer aggregate definitions file is not an array");
       return;
     }
 
     for (const definition of definitions) {
-      await contributorAggregateDefinitionQueries.upsert(db, definition);
+      await organizerAggregateDefinitionQueries.upsert(db, definition);
     }
 
     logger.info(
-      `Imported ${definitions.length} contributor aggregate definitions`,
+      `Imported ${definitions.length} organizer aggregate definitions`,
     );
   } catch (error: any) {
     if (error.code === "ENOENT") {
-      logger.debug("No contributor aggregate definitions file found, skipping");
+      logger.debug("No organizer aggregate definitions file found, skipping");
     } else {
-      logger.error("Failed to import contributor aggregate definitions", error);
+      logger.error("Failed to import organizer aggregate definitions", error);
     }
   }
 }
 
 /**
- * Import contributor aggregates from aggregates/contributors/*.jsonl
+ * Import organizer aggregates from aggregates/organizers/*.jsonl
  */
-export async function importContributorAggregates(
+export async function importOrganizerAggregates(
   db: Database,
   dataDir: string,
   logger: Logger,
 ): Promise<void> {
-  const contributorsDir = join(dataDir, "aggregates", "contributors");
+  const organizersDir = join(dataDir, "aggregates", "organizers");
 
   try {
-    const files = await readdir(contributorsDir);
+    const files = await readdir(organizersDir);
     const jsonlFiles = files.filter((f) => f.endsWith(".jsonl"));
 
     let totalImported = 0;
 
     for (const file of jsonlFiles) {
-      const filePath = join(contributorsDir, file);
+      const filePath = join(organizersDir, file);
       const content = await readFile(filePath, "utf-8");
       const lines = content.trim().split("\n").filter(Boolean);
 
       for (const line of lines) {
         try {
           const aggregate = JSON.parse(line);
-          await contributorAggregateQueries.upsert(db, aggregate);
+          await organizerAggregateQueries.upsert(db, aggregate);
           totalImported++;
         } catch (error) {
           logger.error(
-            `Failed to import contributor aggregate from ${file}`,
+            `Failed to import organizer aggregate from ${file}`,
             error as Error,
           );
         }
@@ -115,13 +115,13 @@ export async function importContributorAggregates(
     }
 
     logger.info(
-      `Imported ${totalImported} contributor aggregates from ${jsonlFiles.length} files`,
+      `Imported ${totalImported} organizer aggregates from ${jsonlFiles.length} files`,
     );
   } catch (error: any) {
     if (error.code === "ENOENT") {
-      logger.debug("No contributor aggregates directory found, skipping");
+      logger.debug("No organizer aggregates directory found, skipping");
     } else {
-      logger.error("Failed to import contributor aggregates", error);
+      logger.error("Failed to import organizer aggregates", error);
     }
   }
 }
@@ -136,6 +136,6 @@ export async function importAggregates(
 ): Promise<void> {
   logger.info("Importing aggregates");
   await importGlobalAggregates(db, dataDir, logger);
-  await importContributorAggregateDefinitions(db, dataDir, logger);
-  await importContributorAggregates(db, dataDir, logger);
+  await importOrganizerAggregateDefinitions(db, dataDir, logger);
+  await importOrganizerAggregates(db, dataDir, logger);
 }

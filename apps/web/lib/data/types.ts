@@ -7,18 +7,18 @@ export interface LeaderboardEntry {
   name: string | null;
   avatar_url: string | null;
   total_points: number;
-  activity_count: number;
-  activity_breakdown?: Record<string, { count: number; points: number }>;
-  daily_activity?: Array<{ date: string; count: number; points: number }>;
+  race_count: number;
+  race_breakdown?: Record<string, { count: number; points: number }>;
+  daily_race?: Array<{ date: string; count: number; points: number }>;
 }
 
-export interface ContributorActivity {
+export interface OrganizerRace {
   slug: string;
-  contributor: string;
-  activity_definition: string;
-  activity_name: string;
-  activity_description: string | null;
-  activity_icon: string | null;
+  organizer: string;
+  race_definition: string;
+  race_name: string;
+  race_description: string | null;
+  race_icon: string | null;
   title: string | null;
   occurred_at: string;
   link: string | null;

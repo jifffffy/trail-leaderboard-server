@@ -239,7 +239,7 @@
                           "monthly"
                         ]
                       },
-                      "activity_definitions": {
+                      "race_definitions": {
                         "type": "array",
                         "items": {
                           "type": "string"

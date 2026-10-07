@@ -113,12 +113,12 @@ export interface Plugin {
 
   /**
    * Optional setup method called before scraping
-   * Used to populate activity_definition table and perform initialization
+   * Used to populate race_definition table and perform initialization
    */
   setup?: (ctx: PluginContext) => Promise<void>;
 
   /**
-   * Main scrape method that fetches and stores activity data
+   * Main scrape method that fetches and stores race data
    */
   scrape: (ctx: PluginContext) => Promise<void>;
 
@@ -154,7 +154,7 @@ export interface PluginManifest {
 /**
  * Database table types for type safety
  */
-export interface Contributor {
+export interface Organizer {
   username: string;
   name: string | null;
   title: string | null;
@@ -164,7 +164,7 @@ export interface Contributor {
   meta: Record<string, unknown> | null;
 }
 
-export interface ActivityDefinition {
+export interface RaceDefinition {
   slug: string;
   name: string;
   description: string;
@@ -172,10 +172,10 @@ export interface ActivityDefinition {
   icon: string | null;
 }
 
-export interface Activity {
+export interface Race {
   slug: string;
-  contributor: string;
-  activity_definition: string;
+  organizer: string;
+  race_definition: string;
   title: string | null;
   occurred_at: string;
   link: string | null;
@@ -276,9 +276,9 @@ export interface GlobalAggregate {
 }
 
 /**
- * Contributor aggregate definition
+ * Organizer aggregate definition
  */
-export interface ContributorAggregateDefinition {
+export interface OrganizerAggregateDefinition {
   slug: string;
   name: string;
   description: string | null;
@@ -286,11 +286,11 @@ export interface ContributorAggregateDefinition {
 }
 
 /**
- * Contributor aggregate (per-contributor metric)
+ * Organizer aggregate (per-organizer metric)
  */
-export interface ContributorAggregate {
+export interface OrganizerAggregate {
   aggregate: string;
-  contributor: string;
+  organizer: string;
   value: AggregateValue;
   meta: Record<string, unknown> | null;
 }
@@ -315,12 +315,12 @@ export interface BadgeDefinition {
 }
 
 /**
- * Contributor badge (achievement earned by a contributor)
+ * Organizer badge (achievement earned by a organizer)
  */
-export interface ContributorBadge {
+export interface OrganizerBadge {
   slug: string;
   badge: string;
-  contributor: string;
+  organizer: string;
   variant: string;
   achieved_on: string;
   meta: Record<string, unknown> | null;
@@ -329,8 +329,8 @@ export interface ContributorBadge {
 // ---- Badge Rule Types ----
 
 /**
- * Threshold-based badge rule (e.g., total activities > 100)
- * Awards badges based on contributor aggregate values reaching thresholds.
+ * Threshold-based badge rule (e.g., total races > 100)
+ * Awards badges based on organizer aggregate values reaching thresholds.
  */
 export interface ThresholdBadgeRule {
   type: "threshold";
@@ -344,14 +344,14 @@ export interface ThresholdBadgeRule {
 }
 
 /**
- * Streak-based badge rule (consecutive days with activity)
+ * Streak-based badge rule (consecutive days with race)
  */
 export interface StreakBadgeRule {
   type: "streak";
   badgeSlug: string;
   enabled: boolean;
   streakType: "daily" | "weekly" | "monthly";
-  activityDefinitions?: string[];
+  raceDefinitions?: string[];
   thresholds: {
     variant: string;
     days: number;

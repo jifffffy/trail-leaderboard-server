@@ -1,22 +1,22 @@
 # @starter/plugin-dummy
 
 Dummy data generator plugin for local development. This plugin generates example
-contributors and activities using Faker.js, making it easy to develop and test the
+organizers and races using Faker.js, making it easy to develop and test the
 site without needing real data.
 
 ## Features
 
-- 🎭 **Example Contributors**: Generates contributors with usernames, bios, and avatars
-- 📊 **Example Activities**: Simulates entries, reviews, comments, and milestones
-- ⚙️ **Highly Configurable**: Control number of contributors, activity frequency, and time periods
+- 🎭 **Example Organizers**: Generates organizers with usernames, bios, and avatars
+- 📊 **Example Races**: Simulates entries, reviews, comments, and milestones
+- ⚙️ **Highly Configurable**: Control number of organizers, race frequency, and time periods
 - 🎲 **Reproducible**: Use seed values for consistent data generation
-- 📈 **Varied Activity Levels**: Some contributors are very active, others occasional
+- 📈 **Varied Race Levels**: Some organizers are very active, others occasional
 
-## Activity Types
+## Race Types
 
-The plugin generates the following activity types:
+The plugin generates the following race types:
 
-| Activity            | Points | Description               |
+| Race                | Points | Description               |
 | ------------------- | ------ | ------------------------- |
 | `entry_created`     | 5      | Created a new entry       |
 | `entry_updated`     | 2      | Updated an existing entry |
@@ -35,12 +35,12 @@ leaderboard:
     dummy:
       source: "@starter/plugin-dummy"
       config:
-        contributors:
-          count: 50 # Number of contributors
-          minActivitiesPerContributor: 5 # Minimum activities per person
-          maxActivitiesPerContributor: 100 # Maximum activities per person
-        activities:
-          daysBack: 90 # Generate activities for last N days
+        organizers:
+          count: 50 # Number of organizers
+          minRacesPerOrganizer: 5 # Minimum races per person
+          maxRacesPerOrganizer: 100 # Maximum races per person
+        races:
+          daysBack: 90 # Generate races for last N days
           seed: 12345 # Optional: for reproducible data
         sources:
           - "source-a"
@@ -67,9 +67,9 @@ leaderboard:
     dummy:
       source: "@starter/plugin-dummy"
       config:
-        contributors:
+        organizers:
           count: 30
-        activities:
+        races:
           daysBack: 60
 ```
 
@@ -94,7 +94,7 @@ pnpm test:watch
 
 ## Generated Data
 
-### Contributors
+### Organizers
 
 - **Username**: Generated (e.g., `john-doe`, `alice123`)
 - **Name**: Realistic full names
@@ -103,7 +103,7 @@ pnpm test:watch
 - **Bio**: Realistic bios
 - **Joining Date**: Spread over past 2 years
 
-### Activities
+### Races
 
 - **Titles**: Realistic example titles
 - **Links**: Example URLs
@@ -121,7 +121,7 @@ leaderboard:
       source: "@starter/plugin-dummy"
 ```
 
-Uses all defaults: 50 contributors, 5-100 activities each, last 90 days.
+Uses all defaults: 50 organizers, 5-100 races each, last 90 days.
 
 ### Reproducible Data
 
@@ -131,7 +131,7 @@ leaderboard:
     dummy:
       source: "@starter/plugin-dummy"
       config:
-        activities:
+        races:
           seed: 42 # Same seed = same data every time
 ```
 
@@ -143,11 +143,11 @@ leaderboard:
     dummy:
       source: "@starter/plugin-dummy"
       config:
-        contributors:
+        organizers:
           count: 10
-          minActivitiesPerContributor: 2
-          maxActivitiesPerContributor: 20
-        activities:
+          minRacesPerOrganizer: 2
+          maxRacesPerOrganizer: 20
+        races:
           daysBack: 30
 ```
 

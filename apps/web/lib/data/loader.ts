@@ -5,56 +5,56 @@
 
 import { getDatabase } from "@/lib/db/client";
 import {
-  activityDefinitionQueries,
-  activityQueries,
   badgeDefinitionQueries,
-  contributorAggregateQueries,
-  contributorBadgeQueries,
-  contributorQueries,
   globalAggregateQueries,
-  type ContributorBadge,
+  organizerAggregateQueries,
+  organizerBadgeQueries,
+  organizerQueries,
+  raceDefinitionQueries,
+  raceQueries,
+  type OrganizerBadge,
 } from "@starter/leaderboard-api";
 
 /**
- * Get all contributors
+ * Get all organizers
  */
-export async function getAllContributors() {
+export async function getAllOrganizers() {
   const db = getDatabase();
-  return await contributorQueries.getAll(db);
+  return await organizerQueries.getAll(db);
 }
 
 /**
- * Get contributor by username
+ * Get organizer by username
  */
-export async function getContributor(username: string) {
+export async function getOrganizer(username: string) {
   const db = getDatabase();
-  return await contributorQueries.getByUsername(db, username);
+  return await organizerQueries.getByUsername(db, username);
 }
 
 /**
- * Get all activity definitions
+ * Get all race definitions
  */
-export async function getAllActivityDefinitions() {
+export async function getAllRaceDefinitions() {
   const db = getDatabase();
-  return await activityDefinitionQueries.getAll(db);
+  return await raceDefinitionQueries.getAll(db);
 }
 
 /**
- * List all activity definitions
+ * List all race definitions
  */
-export async function listActivityDefinitions() {
+export async function listRaceDefinitions() {
   const db = getDatabase();
-  return await activityDefinitionQueries.getAll(db);
+  return await raceDefinitionQueries.getAll(db);
 }
 
 /**
- * Get activities with optional filters
+ * Get races with optional filters
  */
-export async function getActivities(
+export async function getRaces(
   options: {
     limit?: number;
     offset?: number;
-    contributor?: string;
+    organizer?: string;
     startDate?: string;
     endDate?: string;
     definition?: string;
@@ -62,16 +62,16 @@ export async function getActivities(
 ) {
   const db = getDatabase();
 
-  if (options.contributor) {
-    return await activityQueries.getByContributor(
+  if (options.organizer) {
+    return await raceQueries.getByOrganizer(
       db,
-      options.contributor,
+      options.organizer,
       options.limit,
     );
   }
 
   if (options.startDate && options.endDate) {
-    return await activityQueries.getByDateRange(
+    return await raceQueries.getByDateRange(
       db,
       options.startDate,
       options.endDate,
@@ -79,28 +79,25 @@ export async function getActivities(
   }
 
   if (options.definition) {
-    return await activityQueries.getByDefinition(db, options.definition);
+    return await raceQueries.getByDefinition(db, options.definition);
   }
 
-  return await activityQueries.getAll(db, options.limit, options.offset);
+  return await raceQueries.getAll(db, options.limit, options.offset);
 }
 
 /**
- * Get contributor stats
+ * Get organizer stats
  */
-export async function getContributorStats(username: string) {
+export async function getOrganizerStats(username: string) {
   const db = getDatabase();
 
-  const totalPoints = await activityQueries.getTotalPointsByContributor(
-    db,
-    username,
-  );
-  const activities = await activityQueries.getByContributor(db, username);
+  const totalPoints = await raceQueries.getTotalPointsByOrganizer(db, username);
+  const races = await raceQueries.getByOrganizer(db, username);
 
   return {
     totalPoints,
-    activityCount: activities.length,
-    activities,
+    raceCount: races.length,
+    races,
   };
 }
 
@@ -113,74 +110,68 @@ export async function getGlobalAggregates(slugs: string[]) {
 }
 
 /**
- * Get all contributor usernames
+ * Get all organizer usernames
  */
-export async function getAllContributorUsernames() {
+export async function getAllOrganizerUsernames() {
   const db = getDatabase();
-  return await contributorQueries.getAllUsernames(db);
+  return await organizerQueries.getAllUsernames(db);
 }
 
 /**
- * Get contributor profile with activities
+ * Get organizer profile with races
  */
-export async function getContributorProfile(username: string) {
+export async function getOrganizerProfile(username: string) {
   const db = getDatabase();
 
-  const contributor = await contributorQueries.getByUsername(db, username);
-  if (!contributor) {
+  const organizer = await organizerQueries.getByUsername(db, username);
+  if (!organizer) {
     return {
-      contributor: null,
-      activities: [],
+      organizer: null,
+      races: [],
       totalPoints: 0,
-      activityByDate: {},
+      raceByDate: {},
     };
   }
 
-  const activities = await activityQueries.getByContributor(db, username);
-  const totalPoints = await activityQueries.getTotalPointsByContributor(
-    db,
-    username,
-  );
+  const races = await raceQueries.getByOrganizer(db, username);
+  const totalPoints = await raceQueries.getTotalPointsByOrganizer(db, username);
 
-  const activityDefinitions = await activityDefinitionQueries.getAll(db);
-  const defMap = new Map(activityDefinitions.map((d) => [d.slug, d]));
+  const raceDefinitions = await raceDefinitionQueries.getAll(db);
+  const defMap = new Map(raceDefinitions.map((d) => [d.slug, d]));
 
-  const activityCountsByDate = await activityQueries.getActivityCountByDate(
-    db,
-    username,
-  );
-  const activityByDate: Record<string, number> = {};
-  for (const { date, count } of activityCountsByDate) {
-    activityByDate[date] = count;
+  const raceCountsByDate = await raceQueries.getRaceCountByDate(db, username);
+  const raceByDate: Record<string, number> = {};
+  for (const { date, count } of raceCountsByDate) {
+    raceByDate[date] = count;
   }
 
-  const enrichedActivities = activities.map((activity) => {
-    const def = defMap.get(activity.activity_definition);
+  const enrichedRaces = races.map((race) => {
+    const def = defMap.get(race.race_definition);
     return {
-      ...activity,
-      activity_name: def?.name || activity.activity_definition,
-      activity_description: def?.description || null,
-      activity_icon: def?.icon || null,
+      ...race,
+      race_name: def?.name || race.race_definition,
+      race_description: def?.description || null,
+      race_icon: def?.icon || null,
     };
   });
 
   return {
-    contributor,
-    activities: enrichedActivities,
+    organizer,
+    races: enrichedRaces,
     totalPoints,
-    activityByDate,
+    raceByDate,
   };
 }
 
 /**
- * Get contributor aggregates filtered by slugs and visibility
+ * Get organizer aggregates filtered by slugs and visibility
  */
-export async function getContributorAggregates(
+export async function getOrganizerAggregates(
   username: string,
   slugs: string[],
 ) {
   const db = getDatabase();
-  return await contributorAggregateQueries.getByContributorEnriched(
+  return await organizerAggregateQueries.getByOrganizerEnriched(
     db,
     username,
     slugs,
@@ -188,11 +179,11 @@ export async function getContributorAggregates(
 }
 
 /**
- * Get all contributors with avatars and total points
+ * Get all organizers with avatars and total points
  */
-export async function getAllContributorsWithAvatars() {
+export async function getAllOrganizersWithAvatars() {
   const db = getDatabase();
-  return await contributorQueries.getLeaderboardWithPoints(db);
+  return await organizerQueries.getLeaderboardWithPoints(db);
 }
 
 /**
@@ -204,23 +195,23 @@ export async function getAllBadgeDefinitions() {
 }
 
 /**
- * Get all badges earned by a contributor
+ * Get all badges earned by a organizer
  */
-export async function getContributorBadges(
+export async function getOrganizerBadges(
   username: string,
-): Promise<ContributorBadge[]> {
+): Promise<OrganizerBadge[]> {
   const db = getDatabase();
-  return await contributorBadgeQueries.getByContributor(db, username);
+  return await organizerBadgeQueries.getByOrganizer(db, username);
 }
 
 /**
- * Get recent badge achievements across all contributors
+ * Get recent badge achievements across all organizers
  */
 export async function getRecentBadgeAchievements(limit: number = 20): Promise<
   Array<
-    ContributorBadge & {
-      contributor_name: string | null;
-      contributor_avatar_url: string | null;
+    OrganizerBadge & {
+      organizer_name: string | null;
+      organizer_avatar_url: string | null;
       badge_name: string;
       badge_description: string;
       badge_variants: Record<string, { description: string; svg_url: string }>;
@@ -228,11 +219,11 @@ export async function getRecentBadgeAchievements(limit: number = 20): Promise<
   >
 > {
   const db = getDatabase();
-  return await contributorBadgeQueries.getRecentEnriched(db, limit);
+  return await organizerBadgeQueries.getRecentEnriched(db, limit);
 }
 
 /**
- * Get top badge earners (contributors with most badges)
+ * Get top badge earners (organizers with most badges)
  */
 export async function getTopBadgeEarners(limit: number = 10): Promise<
   Array<{
@@ -243,7 +234,7 @@ export async function getTopBadgeEarners(limit: number = 10): Promise<
   }>
 > {
   const db = getDatabase();
-  return await contributorBadgeQueries.getTopEarnersEnriched(db, limit);
+  return await organizerBadgeQueries.getTopEarnersEnriched(db, limit);
 }
 
 /**
@@ -257,7 +248,7 @@ export async function getBadgeAwardCounts(): Promise<
   }>
 > {
   const db = getDatabase();
-  return await contributorBadgeQueries.getAwardCountsByBadge(db);
+  return await organizerBadgeQueries.getAwardCountsByBadge(db);
 }
 
 /**
@@ -268,5 +259,5 @@ export async function getTotalBadgeStats(): Promise<{
   unique_earners: number;
 }> {
   const db = getDatabase();
-  return await contributorBadgeQueries.getTotalStats(db);
+  return await organizerBadgeQueries.getTotalStats(db);
 }

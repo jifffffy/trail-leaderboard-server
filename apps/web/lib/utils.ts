@@ -86,13 +86,13 @@ export function getPreviousDateRange(period: "week" | "month" | "year"): {
 }
 
 /**
- * Generate activity graph data for the last N days
- * @param activityByDate - Object with date keys and activity counts
+ * Generate race graph data for the last N days
+ * @param raceByDate - Object with date keys and race counts
  * @param days - Number of days to include (default 365)
  * @returns Array of objects with date and count for each day
  */
-export function generateActivityGraphData(
-  activityByDate: Record<string, number>,
+export function generateRaceGraphData(
+  raceByDate: Record<string, number>,
   days: number = 365,
 ): Array<{ date: string; count: number; level: number }> {
   const data: Array<{ date: string; count: number; level: number }> = [];
@@ -103,7 +103,7 @@ export function generateActivityGraphData(
     date.setDate(today.getDate() - i);
     const dateKey = format(date, "yyyy-MM-dd");
 
-    const count = activityByDate[dateKey] || 0;
+    const count = raceByDate[dateKey] || 0;
 
     // Calculate level (0-4) for color intensity
     let level = 0;
@@ -169,26 +169,26 @@ export function formatMonthHeader(monthKey: MonthKey): string {
 }
 
 /**
- * Group activities by month with sorted month keys
- * @param activities - Array of activities with occurred_at dates
- * @returns Map of month keys to arrays of activities, sorted newest to oldest
+ * Group races by month with sorted month keys
+ * @param races - Array of races with occurred_at dates
+ * @returns Map of month keys to arrays of races, sorted newest to oldest
  */
-export function groupActivitiesByMonth<
-  T extends { occurred_at: Date | string },
->(activities: T[]): Map<MonthKey, T[]> {
+export function groupRacesByMonth<T extends { occurred_at: Date | string }>(
+  races: T[],
+): Map<MonthKey, T[]> {
   const grouped = new Map<MonthKey, T[]>();
 
-  // Group activities by month
-  activities.forEach((activity) => {
+  // Group races by month
+  races.forEach((race) => {
     const date =
-      activity.occurred_at instanceof Date
-        ? activity.occurred_at
-        : new Date(activity.occurred_at);
+      race.occurred_at instanceof Date
+        ? race.occurred_at
+        : new Date(race.occurred_at);
     const monthKey = getMonthKey(date);
     if (!grouped.has(monthKey)) {
       grouped.set(monthKey, []);
     }
-    grouped.get(monthKey)!.push(activity);
+    grouped.get(monthKey)!.push(race);
   });
 
   // Sort the map by month keys (newest to oldest)

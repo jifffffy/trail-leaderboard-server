@@ -11,26 +11,25 @@ import type { BadgeRuleDefinition } from "./types";
  */
 export const STANDARD_BADGE_DEFINITIONS: BadgeDefinition[] = [
   {
-    slug: "activity_milestone",
-    name: "Activity Milestone",
-    description: "Awarded for reaching activity count milestones",
+    slug: "race_milestone",
+    name: "Race Milestone",
+    description: "Awarded for reaching race count milestones",
     variants: {
       bronze: {
-        description: "10+ activities",
-        svg_url: "https://api.dicebear.com/7.x/shapes/svg?seed=bronze-activity",
+        description: "10+ races",
+        svg_url: "https://api.dicebear.com/7.x/shapes/svg?seed=bronze-race",
       },
       silver: {
-        description: "50+ activities",
-        svg_url: "https://api.dicebear.com/7.x/shapes/svg?seed=silver-activity",
+        description: "50+ races",
+        svg_url: "https://api.dicebear.com/7.x/shapes/svg?seed=silver-race",
       },
       gold: {
-        description: "100+ activities",
-        svg_url: "https://api.dicebear.com/7.x/shapes/svg?seed=gold-activity",
+        description: "100+ races",
+        svg_url: "https://api.dicebear.com/7.x/shapes/svg?seed=gold-race",
       },
       platinum: {
-        description: "500+ activities",
-        svg_url:
-          "https://api.dicebear.com/7.x/shapes/svg?seed=platinum-activity",
+        description: "500+ races",
+        svg_url: "https://api.dicebear.com/7.x/shapes/svg?seed=platinum-race",
       },
     },
   },
@@ -60,7 +59,7 @@ export const STANDARD_BADGE_DEFINITIONS: BadgeDefinition[] = [
   {
     slug: "consistency_champion",
     name: "Consistency Champion",
-    description: "Awarded for maintaining activity streaks",
+    description: "Awarded for maintaining race streaks",
     variants: {
       bronze: {
         description: "7 day streak",
@@ -87,12 +86,12 @@ export const STANDARD_BADGE_DEFINITIONS: BadgeDefinition[] = [
  * These are evaluated automatically during the aggregation phase
  */
 export const STANDARD_BADGE_RULES: BadgeRuleDefinition[] = [
-  // Activity milestone badge
+  // Race milestone badge
   {
     type: "threshold",
-    badgeSlug: "activity_milestone",
+    badgeSlug: "race_milestone",
     enabled: true,
-    aggregateSlug: "activity_count",
+    aggregateSlug: "race_count",
     thresholds: [
       { variant: "bronze", value: 256 },
       { variant: "silver", value: 1024 },
@@ -106,7 +105,7 @@ export const STANDARD_BADGE_RULES: BadgeRuleDefinition[] = [
     type: "threshold",
     badgeSlug: "points_milestone",
     enabled: true,
-    aggregateSlug: "total_activity_points",
+    aggregateSlug: "total_race_points",
     thresholds: [
       { variant: "bronze", value: 100 },
       { variant: "silver", value: 500 },
@@ -115,7 +114,7 @@ export const STANDARD_BADGE_RULES: BadgeRuleDefinition[] = [
     ],
   },
 
-  // Activity streak badge (consecutive days)
+  // Race streak badge (consecutive days)
   {
     type: "streak",
     badgeSlug: "consistency_champion",

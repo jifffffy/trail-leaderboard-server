@@ -1,18 +1,21 @@
 # @starter/web
 
-Next.js static site for the starter. Data is read from the LibSQL database at build
-time and exported as a fully static site.
+JSON-only Next.js static export. At build time it reads the LibSQL database and
+emits static JSON route handlers — there are **no HTML pages**.
+
+## Endpoints
+
+- `GET /api/organizers.json`
+- `GET /api/races.json`
+
+Both are `force-static` route handlers (`app/api/*.json/route.ts`); the database
+projections live in `lib/data/race-api.ts`.
 
 ## Development
 
-Run from the repository root:
-
 ```bash
-pnpm dev
+pnpm dev          # from the repository root
 ```
-
-This runs the `predev` setup scripts (icons, theme, db, assets, avatars) before
-starting Next.js.
 
 ## Build
 
@@ -20,6 +23,8 @@ starting Next.js.
 pnpm --filter @starter/web build
 ```
 
-Output is written to `apps/web/out/`.
+Output is written to `apps/web/out/` (e.g. `out/api/races.json`). The prebuild
+asset scripts (icons, theme, avatars, data explorer) were removed along with the
+HTML pages.
 
 See the [root README](../../README.md) for full setup instructions.

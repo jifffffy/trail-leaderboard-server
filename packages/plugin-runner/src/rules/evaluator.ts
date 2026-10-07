@@ -3,18 +3,18 @@
  */
 
 import type {
-  Activity,
-  ActivityDefinition,
   Database,
   Logger,
+  Race,
+  RaceDefinition,
 } from "@starter/leaderboard-api";
 import {
-  activityDefinitionQueries,
-  activityQueries,
   badgeDefinitionQueries,
-  contributorAggregateQueries,
-  contributorBadgeQueries,
-  contributorQueries,
+  organizerAggregateQueries,
+  organizerBadgeQueries,
+  organizerQueries,
+  raceDefinitionQueries,
+  raceQueries,
 } from "@starter/leaderboard-api";
 import type {
   BadgeRuleDefinition,
@@ -26,14 +26,14 @@ import type {
 } from "./types";
 
 /**
- * Match activity definitions using regex patterns
+ * Match race definitions using regex patterns
  * @param patterns Array of regex patterns (e.g., ["pull_request_.*", "issue_.*"])
- * @param definitions All activity definitions
- * @returns Matched activity definition slugs
+ * @param definitions All race definitions
+ * @returns Matched race definition slugs
  */
-function matchActivityDefinitions(
+function matchRaceDefinitions(
   patterns: string[] | undefined,
-  definitions: ActivityDefinition[],
+  definitions: RaceDefinition[],
 ): string[] {
   // Empty/undefined = all definitions
   if (!patterns || patterns.length === 0) {
@@ -48,7 +48,7 @@ function matchActivityDefinitions(
 }
 
 /**
- * Evaluate badge rules and award badges to contributors
+ * Evaluate badge rules and award badges to organizers
  */
 export async function evaluateBadgeRules(
   db: Database,
@@ -57,18 +57,18 @@ export async function evaluateBadgeRules(
 ): Promise<void> {
   logger.info("Evaluating badge rules", { ruleCount: rules.length });
 
-  // Load all contributors
-  const contributors = await contributorQueries.getAll(db);
+  // Load all organizers
+  const organizers = await organizerQueries.getAll(db);
 
   // Load badge definitions
   const badgeDefinitions = await badgeDefinitionQueries.getAll(db);
 
-  // Load all activity definitions (for streak rule filtering)
-  const activityDefinitions = await activityDefinitionQueries.getAll(db);
+  // Load all race definitions (for streak rule filtering)
+  const raceDefinitions = await raceDefinitionQueries.getAll(db);
 
   let awardsGiven = 0;
 
-  for (const contributor of contributors) {
+  for (const organizer of organizers) {
     // Evaluate each rule
     for (const rule of rules) {
       if (!rule.enabled) continue;
@@ -76,8 +76,8 @@ export async function evaluateBadgeRules(
       const results = await evaluateRule(
         db,
         rule,
-        contributor.username,
-        activityDefinitions,
+        organizer.username,
+        raceDefinitions,
       );
 
       if (!results || results.length === 0) continue;
@@ -106,30 +106,30 @@ export async function evaluateBadgeRules(
           continue;
         }
 
-        const badgeSlug = `${rule.badgeSlug}__${contributor.username}__${variant}`;
+        const badgeSlug = `${rule.badgeSlug}__${organizer.username}__${variant}`;
 
         // Check if this specific variant already exists
         const existingBadge =
-          await contributorBadgeQueries.getByContributorAndBadge(
+          await organizerBadgeQueries.getByOrganizerAndBadge(
             db,
-            contributor.username,
+            organizer.username,
             rule.badgeSlug,
             variant,
           );
 
         if (!existingBadge) {
           // Award new badge variant
-          await contributorBadgeQueries.award(db, {
+          await organizerBadgeQueries.award(db, {
             slug: badgeSlug,
             badge: rule.badgeSlug,
-            contributor: contributor.username,
+            organizer: organizer.username,
             variant,
             achieved_on: resolvedAchievedOn,
             meta: { ...meta, rule_type: rule.type, auto_awarded: true },
           });
           awardsGiven++;
           logger.debug(
-            `Awarded ${rule.badgeSlug} (${variant}) to ${contributor.username}`,
+            `Awarded ${rule.badgeSlug} (${variant}) to ${organizer.username}`,
           );
         }
       }
@@ -142,35 +142,35 @@ export async function evaluateBadgeRules(
 }
 
 /**
- * Evaluate a single rule for a contributor
+ * Evaluate a single rule for a organizer
  */
 async function evaluateRule(
   db: Database,
   rule: BadgeRuleDefinition,
-  contributor: string,
-  activityDefinitions: ActivityDefinition[],
+  organizer: string,
+  raceDefinitions: RaceDefinition[],
 ): Promise<RuleEvaluationResult[] | null> {
   switch (rule.type) {
     case "threshold":
-      return evaluateThresholdRule(db, rule, contributor);
+      return evaluateThresholdRule(db, rule, organizer);
     case "streak":
-      return evaluateStreakRule(db, rule, contributor, activityDefinitions);
+      return evaluateStreakRule(db, rule, organizer, raceDefinitions);
     case "composite":
-      return evaluateCompositeRule(db, rule, contributor);
+      return evaluateCompositeRule(db, rule, organizer);
     case "growth":
-      return evaluateGrowthRule(db, rule, contributor);
+      return evaluateGrowthRule(db, rule, organizer);
     case "custom": {
       // For custom rules, load data and call evaluator
-      const [aggregates, activities, contributorData] = await Promise.all([
-        contributorAggregateQueries.getByContributor(db, contributor),
-        activityQueries.getByContributor(db, contributor),
-        contributorQueries.getByUsername(db, contributor),
+      const [aggregates, races, organizerData] = await Promise.all([
+        organizerAggregateQueries.getByOrganizer(db, organizer),
+        raceQueries.getByOrganizer(db, organizer),
+        organizerQueries.getByUsername(db, organizer),
       ]);
-      if (!contributorData) return null;
+      if (!organizerData) return null;
       const aggregateMap = new Map(
         aggregates.map((a) => [a.aggregate, a.value]),
       );
-      const result = rule.evaluator(contributorData, aggregateMap, activities);
+      const result = rule.evaluator(organizerData, aggregateMap, races);
       return result ? [result] : null;
     }
     default:
@@ -184,21 +184,19 @@ async function evaluateRule(
 async function evaluateThresholdRule(
   db: Database,
   rule: ThresholdBadgeRule,
-  contributor: string,
+  organizer: string,
 ): Promise<RuleEvaluationResult[] | null> {
-  // Get contributor's aggregate value using SQL
-  const contributors =
-    await contributorAggregateQueries.getContributorsAboveThreshold(
+  // Get organizer's aggregate value using SQL
+  const organizers =
+    await organizerAggregateQueries.getOrganizersAboveThreshold(
       db,
       rule.aggregateSlug,
       Math.min(...rule.thresholds.map((t) => t.value)), // Minimum threshold
     );
 
-  // Find this contributor
-  const contributorData = contributors.find(
-    (c) => c.contributor === contributor,
-  );
-  if (!contributorData) return null;
+  // Find this organizer
+  const organizerData = organizers.find((c) => c.organizer === organizer);
+  if (!organizerData) return null;
 
   // Sort thresholds by value ascending and collect ALL qualifying variants
   const sortedThresholds = [...rule.thresholds].sort(
@@ -208,11 +206,11 @@ async function evaluateThresholdRule(
   const results: RuleEvaluationResult[] = [];
 
   for (const threshold of sortedThresholds) {
-    if (contributorData.value >= threshold.value) {
-      // Determine achieved_on from the activity that crossed this threshold
+    if (organizerData.value >= threshold.value) {
+      // Determine achieved_on from the race that crossed this threshold
       const achievedOn = await resolveThresholdAchievedOn(
         db,
-        contributor,
+        organizer,
         rule.aggregateSlug,
         threshold.value,
       );
@@ -223,7 +221,7 @@ async function evaluateThresholdRule(
         achievedOn,
         meta: {
           threshold: threshold.value,
-          actualValue: contributorData.value,
+          actualValue: organizerData.value,
         },
       });
     }
@@ -233,48 +231,45 @@ async function evaluateThresholdRule(
 }
 
 /**
- * Resolve the achieved_on date for a threshold rule by finding the activity
- * that caused the contributor to cross the threshold.
+ * Resolve the achieved_on date for a threshold rule by finding the race
+ * that caused the organizer to cross the threshold.
  *
  * Supports:
- * - `activity_count` — date of the Nth activity
- * - `activity_count:<definition>` — date of the Nth activity of that type
- * - `total_activity_points` — date when cumulative points crossed the threshold
+ * - `race_count` — date of the Nth race
+ * - `race_count:<definition>` — date of the Nth race of that type
+ * - `total_race_points` — date when cumulative points crossed the threshold
  * - Other aggregates — returns undefined (falls back to current date)
  */
 async function resolveThresholdAchievedOn(
   db: Database,
-  contributor: string,
+  organizer: string,
   aggregateSlug: string,
   thresholdValue: number,
 ): Promise<string | undefined> {
-  if (aggregateSlug === "activity_count") {
+  if (aggregateSlug === "race_count") {
     return (
-      (await activityQueries.getDateAtOffset(
+      (await raceQueries.getDateAtOffset(db, organizer, thresholdValue - 1)) ??
+      undefined
+    );
+  }
+
+  if (aggregateSlug.startsWith("race_count:")) {
+    const raceDefinition = aggregateSlug.slice("race_count:".length);
+    return (
+      (await raceQueries.getDateAtOffset(
         db,
-        contributor,
+        organizer,
         thresholdValue - 1,
+        raceDefinition,
       )) ?? undefined
     );
   }
 
-  if (aggregateSlug.startsWith("activity_count:")) {
-    const activityDefinition = aggregateSlug.slice("activity_count:".length);
+  if (aggregateSlug === "total_race_points") {
     return (
-      (await activityQueries.getDateAtOffset(
+      (await raceQueries.getDateAtPointsThreshold(
         db,
-        contributor,
-        thresholdValue - 1,
-        activityDefinition,
-      )) ?? undefined
-    );
-  }
-
-  if (aggregateSlug === "total_activity_points") {
-    return (
-      (await activityQueries.getDateAtPointsThreshold(
-        db,
-        contributor,
+        organizer,
         thresholdValue,
       )) ?? undefined
     );
@@ -284,37 +279,37 @@ async function resolveThresholdAchievedOn(
 }
 
 /**
- * Evaluate streak-based rule with activity definition filtering
+ * Evaluate streak-based rule with race definition filtering
  */
 async function evaluateStreakRule(
   db: Database,
   rule: StreakBadgeRule,
-  contributor: string,
-  allActivityDefinitions: ActivityDefinition[],
+  organizer: string,
+  allRaceDefinitions: RaceDefinition[],
 ): Promise<RuleEvaluationResult[] | null> {
-  // Match activity definitions using regex patterns
-  const matchedSlugs = matchActivityDefinitions(
-    rule.activityDefinitions,
-    allActivityDefinitions,
+  // Match race definitions using regex patterns
+  const matchedSlugs = matchRaceDefinitions(
+    rule.raceDefinitions,
+    allRaceDefinitions,
   );
 
   if (matchedSlugs.length === 0) return null;
 
-  // Fetch filtered activities using SQL
-  const activities = await activityQueries.getByContributorAndDefinitions(
+  // Fetch filtered races using SQL
+  const races = await raceQueries.getByOrganizerAndDefinitions(
     db,
-    contributor,
+    organizer,
     matchedSlugs,
   );
 
-  if (activities.length === 0) return null;
+  if (races.length === 0) return null;
 
-  // Calculate longest streak (union of all matched activities)
+  // Calculate longest streak (union of all matched races)
   const {
     streak: longestStreak,
     startIndex,
     sortedDates,
-  } = calculateLongestStreak(activities, rule.streakType);
+  } = calculateLongestStreak(races, rule.streakType);
 
   // Sort thresholds by days ascending and collect ALL qualifying variants
   const sortedThresholds = [...rule.thresholds].sort((a, b) => a.days - b.days);
@@ -334,7 +329,7 @@ async function evaluateStreakRule(
         meta: {
           streakDays: longestStreak,
           requiredDays: threshold.days,
-          activityDefinitions: matchedSlugs,
+          raceDefinitions: matchedSlugs,
         },
       });
     }
@@ -344,11 +339,11 @@ async function evaluateStreakRule(
 }
 
 /**
- * Calculate the longest streak of consecutive days with activity.
+ * Calculate the longest streak of consecutive days with race.
  * Returns both the streak length and the end date of the longest streak.
  */
 function calculateLongestStreak(
-  activities: Activity[],
+  races: Race[],
   streakType: "daily" | "weekly" | "monthly",
 ): {
   streak: number;
@@ -357,11 +352,11 @@ function calculateLongestStreak(
   sortedDates: string[];
 } {
   const empty = { streak: 0, startIndex: 0, endIndex: 0, sortedDates: [] };
-  if (activities.length === 0) return empty;
+  if (races.length === 0) return empty;
 
   // Get unique dates
   const uniqueDates = Array.from(
-    new Set(activities.map((a) => a.occurred_at.split("T")[0])),
+    new Set(races.map((a) => a.occurred_at.split("T")[0])),
   ).sort();
 
   if (uniqueDates.length === 0) return empty;
@@ -445,7 +440,7 @@ function calculateLongestStreak(
 async function evaluateGrowthRule(
   db: Database,
   rule: GrowthBadgeRule,
-  contributor: string,
+  organizer: string,
 ): Promise<RuleEvaluationResult[] | null> {
   // For now, return null as we don't have historical data
   // This would require storing aggregate values over time
@@ -458,29 +453,29 @@ async function evaluateGrowthRule(
 async function evaluateCompositeRule(
   db: Database,
   rule: CompositeBadgeRule,
-  contributor: string,
+  organizer: string,
 ): Promise<RuleEvaluationResult[] | null> {
   const results: boolean[] = [];
 
   for (const condition of rule.conditions) {
     // Fetch aggregate from DB
     const aggregates =
-      await contributorAggregateQueries.getContributorsWithAggregate(
+      await organizerAggregateQueries.getOrganizersWithAggregate(
         db,
         condition.aggregateSlug,
       );
 
-    const contributorAggregate = aggregates.find(
-      (a) => a.contributor === contributor,
+    const organizerAggregate = aggregates.find(
+      (a) => a.organizer === organizer,
     );
-    if (!contributorAggregate || contributorAggregate.value.type !== "number") {
+    if (!organizerAggregate || organizerAggregate.value.type !== "number") {
       results.push(false);
       continue;
     }
 
     // Evaluate condition
     let conditionMet = false;
-    const value = contributorAggregate.value.value;
+    const value = organizerAggregate.value.value;
 
     switch (condition.operator) {
       case ">":

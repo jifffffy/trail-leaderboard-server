@@ -7,12 +7,12 @@
  */
 
 import type {
-  Activity,
   AggregateValue,
   CompositeBadgeRule,
-  Contributor,
   BadgeRuleDefinition as DeclarativeBadgeRuleDefinition,
   GrowthBadgeRule,
+  Organizer,
+  Race,
   StreakBadgeRule,
   ThresholdBadgeRule,
 } from "@starter/leaderboard-api";
@@ -40,9 +40,9 @@ export interface BadgeRule {
 export interface CustomBadgeRule extends BadgeRule {
   type: "custom";
   evaluator: (
-    contributor: Contributor,
+    organizer: Organizer,
     aggregates: Map<string, AggregateValue>,
-    activities: Activity[],
+    races: Race[],
   ) => {
     shouldAward: boolean;
     variant: string;

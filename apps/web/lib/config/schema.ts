@@ -33,7 +33,7 @@ export const LeaderboardConfigSchema = z.object({
   aggregates: z
     .object({
       global: z.array(z.string()).optional(),
-      contributor: z.array(z.string()).optional(),
+      organizer: z.array(z.string()).optional(),
     })
     .optional(),
   plugins: z.record(z.string(), PluginInstanceConfigSchema).optional(),

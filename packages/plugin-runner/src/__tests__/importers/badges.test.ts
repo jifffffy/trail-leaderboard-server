@@ -5,10 +5,10 @@
 import type { Database } from "@starter/leaderboard-api";
 import {
   badgeDefinitionQueries,
-  contributorBadgeQueries,
-  contributorQueries,
   createDatabase,
   initializeSchema,
+  organizerBadgeQueries,
+  organizerQueries,
 } from "@starter/leaderboard-api";
 import { mkdir, rm, writeFile } from "fs/promises";
 import { join } from "path";
@@ -16,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   importBadgeDefinitions,
   importBadges,
-  importContributorBadges,
+  importOrganizerBadges,
 } from "../../importers/badges";
 import { createLogger } from "../../logger";
 
@@ -41,20 +41,20 @@ describe("Badge Importers", () => {
     it("should import badge definitions from JSON", async () => {
       const definitions = [
         {
-          slug: "activity_milestone",
-          name: "Activity Milestone",
-          description: "Awarded for reaching activity milestones",
+          slug: "race_milestone",
+          name: "Race Milestone",
+          description: "Awarded for reaching race milestones",
           variants: {
             bronze: {
-              description: "10+ activities",
+              description: "10+ races",
               svg_url: "https://example.com/bronze.svg",
             },
             silver: {
-              description: "50+ activities",
+              description: "50+ races",
               svg_url: "https://example.com/silver.svg",
             },
             gold: {
-              description: "100+ activities",
+              description: "100+ races",
               svg_url: "https://example.com/gold.svg",
             },
           },
@@ -72,7 +72,7 @@ describe("Badge Importers", () => {
 
       const imported = await badgeDefinitionQueries.getAll(db);
       expect(imported).toHaveLength(1);
-      expect(imported[0].slug).toBe("activity_milestone");
+      expect(imported[0].slug).toBe("race_milestone");
       expect(imported[0].variants.bronze).toBeDefined();
     });
 
@@ -113,10 +113,10 @@ describe("Badge Importers", () => {
     });
   });
 
-  describe("importContributorBadges", () => {
+  describe("importOrganizerBadges", () => {
     beforeEach(async () => {
-      // Setup contributors and badge definitions
-      await contributorQueries.upsert(db, {
+      // Setup organizers and badge definitions
+      await organizerQueries.upsert(db, {
         username: "alice",
         name: "Alice",
         title: null,
@@ -127,8 +127,8 @@ describe("Badge Importers", () => {
       });
 
       await badgeDefinitionQueries.upsert(db, {
-        slug: "activity_milestone",
-        name: "Activity Milestone",
+        slug: "race_milestone",
+        name: "Race Milestone",
         description: "Test badge",
         variants: {
           bronze: { description: "10+", svg_url: "url" },
@@ -144,12 +144,12 @@ describe("Badge Importers", () => {
       });
     });
 
-    it("should import contributor badges from JSONL files", async () => {
+    it("should import organizer badges from JSONL files", async () => {
       const badges = [
         {
-          slug: "activity_milestone__alice__bronze",
-          badge: "activity_milestone",
-          contributor: "alice",
+          slug: "race_milestone__alice__bronze",
+          badge: "race_milestone",
+          organizer: "alice",
           variant: "bronze",
           achieved_on: "2025-01-05",
           meta: { auto_awarded: true },
@@ -157,33 +157,30 @@ describe("Badge Importers", () => {
         {
           slug: "streak_badge__alice__bronze",
           badge: "streak_badge",
-          contributor: "alice",
+          organizer: "alice",
           variant: "bronze",
           achieved_on: "2025-01-04",
           meta: null,
         },
       ];
 
-      await mkdir(join(TEST_DATA_DIR, "badges", "contributors"), {
+      await mkdir(join(TEST_DATA_DIR, "badges", "organizers"), {
         recursive: true,
       });
       await writeFile(
-        join(TEST_DATA_DIR, "badges", "contributors", "alice.jsonl"),
+        join(TEST_DATA_DIR, "badges", "organizers", "alice.jsonl"),
         badges.map((b) => JSON.stringify(b)).join("\n") + "\n",
         "utf-8",
       );
 
-      await importContributorBadges(db, TEST_DATA_DIR, logger);
+      await importOrganizerBadges(db, TEST_DATA_DIR, logger);
 
-      const imported = await contributorBadgeQueries.getByContributor(
-        db,
-        "alice",
-      );
+      const imported = await organizerBadgeQueries.getByOrganizer(db, "alice");
       expect(imported).toHaveLength(2);
     });
 
-    it("should handle multiple contributor files", async () => {
-      await contributorQueries.upsert(db, {
+    it("should handle multiple organizer files", async () => {
+      await organizerQueries.upsert(db, {
         username: "bob",
         name: "Bob",
         title: null,
@@ -193,16 +190,16 @@ describe("Badge Importers", () => {
         meta: null,
       });
 
-      await mkdir(join(TEST_DATA_DIR, "badges", "contributors"), {
+      await mkdir(join(TEST_DATA_DIR, "badges", "organizers"), {
         recursive: true,
       });
 
       await writeFile(
-        join(TEST_DATA_DIR, "badges", "contributors", "alice.jsonl"),
+        join(TEST_DATA_DIR, "badges", "organizers", "alice.jsonl"),
         JSON.stringify({
-          slug: "activity_milestone__alice__bronze",
-          badge: "activity_milestone",
-          contributor: "alice",
+          slug: "race_milestone__alice__bronze",
+          badge: "race_milestone",
+          organizer: "alice",
           variant: "bronze",
           achieved_on: "2025-01-05",
           meta: null,
@@ -211,11 +208,11 @@ describe("Badge Importers", () => {
       );
 
       await writeFile(
-        join(TEST_DATA_DIR, "badges", "contributors", "bob.jsonl"),
+        join(TEST_DATA_DIR, "badges", "organizers", "bob.jsonl"),
         JSON.stringify({
-          slug: "activity_milestone__bob__silver",
-          badge: "activity_milestone",
-          contributor: "bob",
+          slug: "race_milestone__bob__silver",
+          badge: "race_milestone",
+          organizer: "bob",
           variant: "silver",
           achieved_on: "2025-01-05",
           meta: null,
@@ -223,31 +220,28 @@ describe("Badge Importers", () => {
         "utf-8",
       );
 
-      await importContributorBadges(db, TEST_DATA_DIR, logger);
+      await importOrganizerBadges(db, TEST_DATA_DIR, logger);
 
-      const aliceBadges = await contributorBadgeQueries.getByContributor(
+      const aliceBadges = await organizerBadgeQueries.getByOrganizer(
         db,
         "alice",
       );
-      const bobBadges = await contributorBadgeQueries.getByContributor(
-        db,
-        "bob",
-      );
+      const bobBadges = await organizerBadgeQueries.getByOrganizer(db, "bob");
 
       expect(aliceBadges).toHaveLength(1);
       expect(bobBadges).toHaveLength(1);
     });
 
     it("should preserve badge metadata", async () => {
-      await mkdir(join(TEST_DATA_DIR, "badges", "contributors"), {
+      await mkdir(join(TEST_DATA_DIR, "badges", "organizers"), {
         recursive: true,
       });
       await writeFile(
-        join(TEST_DATA_DIR, "badges", "contributors", "alice.jsonl"),
+        join(TEST_DATA_DIR, "badges", "organizers", "alice.jsonl"),
         JSON.stringify({
-          slug: "activity_milestone__alice__bronze",
-          badge: "activity_milestone",
-          contributor: "alice",
+          slug: "race_milestone__alice__bronze",
+          badge: "race_milestone",
+          organizer: "alice",
           variant: "bronze",
           achieved_on: "2025-01-05",
           meta: {
@@ -259,12 +253,12 @@ describe("Badge Importers", () => {
         "utf-8",
       );
 
-      await importContributorBadges(db, TEST_DATA_DIR, logger);
+      await importOrganizerBadges(db, TEST_DATA_DIR, logger);
 
-      const badge = await contributorBadgeQueries.getByContributorAndBadge(
+      const badge = await organizerBadgeQueries.getByOrganizerAndBadge(
         db,
         "alice",
-        "activity_milestone",
+        "race_milestone",
       );
 
       expect(badge?.meta).toBeDefined();
@@ -272,17 +266,17 @@ describe("Badge Importers", () => {
       expect(badge?.meta?.threshold).toBe(10);
     });
 
-    it("should handle missing contributors directory", async () => {
-      await importContributorBadges(db, TEST_DATA_DIR, logger);
+    it("should handle missing organizers directory", async () => {
+      await importOrganizerBadges(db, TEST_DATA_DIR, logger);
 
-      const badges = await contributorBadgeQueries.getAll(db);
+      const badges = await organizerBadgeQueries.getAll(db);
       expect(badges).toHaveLength(0);
     });
   });
 
   describe("importBadges", () => {
     it("should import all badge data", async () => {
-      await contributorQueries.upsert(db, {
+      await organizerQueries.upsert(db, {
         username: "alice",
         name: "Alice",
         title: null,
@@ -292,7 +286,7 @@ describe("Badge Importers", () => {
         meta: null,
       });
 
-      await mkdir(join(TEST_DATA_DIR, "badges", "contributors"), {
+      await mkdir(join(TEST_DATA_DIR, "badges", "organizers"), {
         recursive: true,
       });
 
@@ -301,8 +295,8 @@ describe("Badge Importers", () => {
         join(TEST_DATA_DIR, "badges", "definitions.json"),
         JSON.stringify([
           {
-            slug: "activity_milestone",
-            name: "Activity Milestone",
+            slug: "race_milestone",
+            name: "Race Milestone",
             description: "Test badge",
             variants: { bronze: { description: "10+", svg_url: "url" } },
           },
@@ -310,13 +304,13 @@ describe("Badge Importers", () => {
         "utf-8",
       );
 
-      // Contributor badges
+      // Organizer badges
       await writeFile(
-        join(TEST_DATA_DIR, "badges", "contributors", "alice.jsonl"),
+        join(TEST_DATA_DIR, "badges", "organizers", "alice.jsonl"),
         JSON.stringify({
-          slug: "activity_milestone__alice__bronze",
-          badge: "activity_milestone",
-          contributor: "alice",
+          slug: "race_milestone__alice__bronze",
+          badge: "race_milestone",
+          organizer: "alice",
           variant: "bronze",
           achieved_on: "2025-01-05",
           meta: null,
@@ -327,10 +321,10 @@ describe("Badge Importers", () => {
       await importBadges(db, TEST_DATA_DIR, logger);
 
       const definitions = await badgeDefinitionQueries.getAll(db);
-      const contributorBadges = await contributorBadgeQueries.getAll(db);
+      const organizerBadges = await organizerBadgeQueries.getAll(db);
 
       expect(definitions).toHaveLength(1);
-      expect(contributorBadges).toHaveLength(1);
+      expect(organizerBadges).toHaveLength(1);
     });
   });
 });

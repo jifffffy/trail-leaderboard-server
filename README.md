@@ -13,12 +13,11 @@ Everything is generated at build time; the output is a fully static site you can
 ## Features
 
 - 🔌 **Plugin Architecture**: add new data sources without touching the core
-- 📊 **Multiple Views**: contributor directory, entity profiles, data explorer
+- 📊 **JSON API**: organizer and race data exported as static JSON
 - 🤖 **MCP Server**: query the generated data with AI assistants (Model Context Protocol)
 - 🧰 **Scaffolding CLIs**: `create-starter-plugin` and `create-starter-data-repo`
-- 📝 **Human-Editable**: contributor profiles in Markdown, activities in sharded JSONL
-- 🎨 **Customizable**: theme overrides and configurable aggregates
-- 🚀 **Static Export**: deploy to any static host
+- 📝 **Human-Editable**: organizer profiles in Markdown, races in sharded JSONL
+- 🚀 **Static Export**: deploy the JSON to any static host
 
 ## Requirements
 
@@ -30,14 +29,14 @@ Everything is generated at build time; the output is a fully static site you can
 ```bash
 pnpm install
 pnpm build:packages
-pnpm setup:dev      # generate dummy data (30 contributors, 90 days)
+pnpm setup:dev      # generate dummy data (30 organizers, 90 days)
 pnpm dev            # http://localhost:3000
 ```
 
 `setup:dev` options:
 
 ```bash
-pnpm setup:dev --contributors 50
+pnpm setup:dev --organizers 50
 pnpm setup:dev --days 30
 pnpm setup:dev --seed 12345     # reproducible data
 pnpm setup:dev --force
@@ -48,11 +47,12 @@ pnpm setup:dev --force
 ```
 .
 ├── apps/
-│   └── web/                    # Next.js static site
+│   └── web/                    # JSON-only Next.js static export (/api/*.json)
 ├── packages/
 │   ├── api/                    # database utilities, plugin types, query builders
 │   ├── plugin-runner/          # CLI orchestrating data collection
 │   ├── plugin-dummy/           # example plugin (dummy data generator)
+│   ├── plugin-race-articles/   # race articles -> organizer/race data
 │   ├── mcp-server/             # MCP server for AI assistant queries
 │   ├── create-plugin/          # plugin scaffolding CLI
 │   └── create-data-repo/       # data repository scaffolding CLI
@@ -85,7 +85,7 @@ org:
 
 meta:
   title: My Site
-  description: Track our amazing contributors
+  description: Track our amazing organizers
   site_url: https://site.example.com
   image_url: https://example.com/og-image.png
   favicon_url: https://example.com/favicon.ico
@@ -129,8 +129,9 @@ pnpm generate:schema
 
 ## Deployment
 
-`pnpm build:web` emits a static site to `apps/web/out/`. Deploy that
-directory to any static host (Netlify, Vercel, GitHub Pages, Cloudflare Pages, S3, ...).
+`pnpm build:web` emits static JSON to `apps/web/out/` (e.g. `out/api/races.json`,
+`out/api/organizers.json`). Deploy that directory to any static host (Netlify,
+Vercel, GitHub Pages, Cloudflare Pages, S3, ...).
 
 ## Environment Variables
 

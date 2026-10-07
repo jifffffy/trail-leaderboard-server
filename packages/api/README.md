@@ -20,20 +20,20 @@ const myPlugin: Plugin = {
   version: "1.0.0",
 
   async setup(ctx: PluginContext) {
-    // Initialize activity definitions
+    // Initialize race definitions
     await ctx.db.execute(
       `
-      INSERT OR IGNORE INTO activity_definition (slug, name, description, points)
+      INSERT OR IGNORE INTO race_definition (slug, name, description, points)
       VALUES (?, ?, ?, ?)
     `,
-      ["my_activity", "My Activity", "Description", 10],
+      ["my_race", "My Race", "Description", 10],
     );
   },
 
   async scrape(ctx: PluginContext) {
-    // Fetch and store activities
+    // Fetch and store races
     const data = await fetchData(ctx.config);
-    // Insert activities into database
+    // Insert races into database
   },
 
   async aggregate(ctx: PluginContext) {
@@ -57,13 +57,13 @@ await initializeSchema(db);
 ### Query Helpers
 
 ```typescript
-import { contributorQueries, activityQueries } from "@starter/leaderboard-api";
+import { organizerQueries, raceQueries } from "@starter/leaderboard-api";
 
-// Get all contributors
-const contributors = await contributorQueries.getAll(db);
+// Get all organizers
+const organizers = await organizerQueries.getAll(db);
 
-// Get recent activities
-const activities = await activityQueries.getAll(db, 10);
+// Get recent races
+const races = await raceQueries.getAll(db, 10);
 ```
 
 ### Generate Seed Data
@@ -79,9 +79,9 @@ This package exports all core types used throughout the starter:
 - `Database` - Database interface abstraction
 - `Plugin` - Plugin interface
 - `PluginContext` - Context passed to plugin methods
-- `Contributor` - Contributor data structure
-- `Activity` - Activity data structure
-- `ActivityDefinition` - Activity definition data structure
+- `Organizer` - Organizer data structure
+- `Race` - Race data structure
+- `RaceDefinition` - Race definition data structure
 - And more...
 
 ## License

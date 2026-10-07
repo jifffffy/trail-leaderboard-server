@@ -43,7 +43,7 @@ jobs:
         run: pnpm test
 
       - name: Setup dev data
-        run: pnpm setup:dev --seed 42
+        run: pnpm setup:dev --force --seed 42
 
       - name: Build web
         run: pnpm build:web

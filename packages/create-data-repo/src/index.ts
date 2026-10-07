@@ -38,10 +38,8 @@ async function main(): Promise<void> {
     console.log("  - config.yaml         Configuration file");
     console.log("  - README.md           Repository documentation");
     console.log("  - .gitignore          Git ignore rules");
-    console.log(
-      "  - contributors/       Contributor profiles directory (empty)",
-    );
-    console.log("  - activities/         Activity records directory (empty)");
+    console.log("  - organizers/       Organizer profiles directory (empty)");
+    console.log("  - races/         Race records directory (empty)");
     console.log("  - Git repository      Initialized with initial commit");
     process.exit(0);
   }
@@ -68,8 +66,8 @@ async function main(): Promise<void> {
     // Create directory structure
     console.log(`\n📁 Creating data repository in: ${targetDir}`);
     mkdirSync(targetDir, { recursive: true });
-    mkdirSync(resolve(targetDir, "contributors"), { recursive: true });
-    mkdirSync(resolve(targetDir, "activities"), { recursive: true });
+    mkdirSync(resolve(targetDir, "organizers"), { recursive: true });
+    mkdirSync(resolve(targetDir, "races"), { recursive: true });
 
     // Generate files
     console.log("📝 Generating configuration files...");

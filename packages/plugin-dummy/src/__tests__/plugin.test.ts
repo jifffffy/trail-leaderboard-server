@@ -6,51 +6,47 @@ import { faker } from "@faker-js/faker";
 import type { Database } from "@starter/leaderboard-api";
 import { createDatabase, initializeSchema } from "@starter/leaderboard-api";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-  ACTIVITY_TYPES,
-  generateActivities,
-  generateActivitiesForContributor,
-  generateActivity,
-} from "../activities";
 import { DEFAULT_CONFIG, mergeConfig } from "../config";
-import { generateContributor, generateContributors } from "../contributors";
 import plugin from "../index";
+import { generateOrganizer, generateOrganizers } from "../organizers";
+import {
+  RACE_TYPES,
+  generateRace,
+  generateRaces,
+  generateRacesForOrganizer,
+} from "../races";
 
 describe("Dummy Plugin", () => {
   describe("Configuration", () => {
     it("should merge configs correctly", () => {
       const config = mergeConfig({
-        contributors: {
+        organizers: {
           count: 20,
         },
       });
 
-      expect(config.contributors.count).toBe(20);
-      expect(config.contributors.minActivitiesPerContributor).toBe(
-        DEFAULT_CONFIG.contributors.minActivitiesPerContributor,
+      expect(config.organizers.count).toBe(20);
+      expect(config.organizers.minRacesPerOrganizer).toBe(
+        DEFAULT_CONFIG.organizers.minRacesPerOrganizer,
       );
-      expect(config.activities.daysBack).toBe(
-        DEFAULT_CONFIG.activities.daysBack,
-      );
+      expect(config.races.daysBack).toBe(DEFAULT_CONFIG.races.daysBack);
     });
 
     it("should handle empty config", () => {
       const config = mergeConfig();
 
-      expect(config.contributors.count).toBe(DEFAULT_CONFIG.contributors.count);
-      expect(config.activities.daysBack).toBe(
-        DEFAULT_CONFIG.activities.daysBack,
-      );
+      expect(config.organizers.count).toBe(DEFAULT_CONFIG.organizers.count);
+      expect(config.races.daysBack).toBe(DEFAULT_CONFIG.races.daysBack);
     });
 
     it("should handle seed configuration", () => {
       const config = mergeConfig({
-        activities: {
+        races: {
           seed: 12345,
         },
       });
 
-      expect(config.activities.seed).toBe(12345);
+      expect(config.races.seed).toBe(12345);
     });
 
     it("should default source names", () => {
@@ -60,128 +56,119 @@ describe("Dummy Plugin", () => {
     });
   });
 
-  describe("Contributor Generation", () => {
-    it("should generate a single contributor", () => {
-      const contributor = generateContributor();
+  describe("Organizer Generation", () => {
+    it("should generate a single organizer", () => {
+      const organizer = generateOrganizer();
 
-      expect(contributor).toBeDefined();
-      expect(contributor.username).toBeTruthy();
-      expect(contributor.name).toBeTruthy();
-      expect(contributor.avatar_url).toBeTruthy();
-      expect(contributor.joining_date).toBeTruthy();
+      expect(organizer).toBeDefined();
+      expect(organizer.username).toBeTruthy();
+      expect(organizer.name).toBeTruthy();
+      expect(organizer.avatar_url).toBeTruthy();
+      expect(organizer.joining_date).toBeTruthy();
     });
 
     it("should generate unique usernames", () => {
-      const contributors = generateContributors(30);
-      const usernames = contributors.map((c) => c.username);
+      const organizers = generateOrganizers(30);
+      const usernames = organizers.map((c) => c.username);
       const uniqueUsernames = new Set(usernames);
 
       expect(uniqueUsernames.size).toBe(30);
     });
   });
 
-  describe("Activity Generation", () => {
-    it("should generate a single activity", () => {
-      const activity = generateActivity(
+  describe("Race Generation", () => {
+    it("should generate a single race", () => {
+      const race = generateRace(
         "testuser",
         "entry_created",
         "source-a",
         new Date(),
       );
 
-      expect(activity).toBeDefined();
-      expect(activity.contributor).toBe("testuser");
-      expect(activity.activity_definition).toBe("entry_created");
-      expect(activity.points).toBe(ACTIVITY_TYPES.entry_created.points);
-      expect(activity.title).toBeTruthy();
-      expect(activity.link).toContain("example.com");
+      expect(race).toBeDefined();
+      expect(race.organizer).toBe("testuser");
+      expect(race.race_definition).toBe("entry_created");
+      expect(race.points).toBe(RACE_TYPES.entry_created.points);
+      expect(race.title).toBeTruthy();
+      expect(race.link).toContain("example.com");
     });
 
-    it("should generate activities for a contributor", () => {
-      const activities = generateActivitiesForContributor("testuser", 10, 30, [
+    it("should generate races for a organizer", () => {
+      const races = generateRacesForOrganizer("testuser", 10, 30, [
         "source-a",
         "source-b",
       ]);
 
-      expect(activities).toHaveLength(10);
-      expect(activities.every((a) => a.contributor === "testuser")).toBe(true);
+      expect(races).toHaveLength(10);
+      expect(races.every((a) => a.organizer === "testuser")).toBe(true);
     });
 
-    it("should generate activities with valid timestamps", () => {
+    it("should generate races with valid timestamps", () => {
       const now = new Date();
       const daysBack = 30;
-      const activities = generateActivitiesForContributor(
-        "testuser",
-        20,
-        daysBack,
-        ["source-a"],
-      );
+      const races = generateRacesForOrganizer("testuser", 20, daysBack, [
+        "source-a",
+      ]);
 
       const startDate = new Date(now);
       startDate.setDate(startDate.getDate() - daysBack);
 
-      for (const activity of activities) {
-        const activityDate = new Date(activity.occurred_at);
-        expect(activityDate.getTime()).toBeGreaterThanOrEqual(
-          startDate.getTime(),
-        );
-        expect(activityDate.getTime()).toBeLessThanOrEqual(now.getTime());
+      for (const race of races) {
+        const raceDate = new Date(race.occurred_at);
+        expect(raceDate.getTime()).toBeGreaterThanOrEqual(startDate.getTime());
+        expect(raceDate.getTime()).toBeLessThanOrEqual(now.getTime());
       }
     });
 
-    it("should generate activities sorted by date", () => {
-      const activities = generateActivitiesForContributor("testuser", 15, 60, [
-        "source-a",
-      ]);
+    it("should generate races sorted by date", () => {
+      const races = generateRacesForOrganizer("testuser", 15, 60, ["source-a"]);
 
-      for (let i = 1; i < activities.length; i++) {
-        const prevDate = new Date(activities[i - 1].occurred_at);
-        const currDate = new Date(activities[i].occurred_at);
+      for (let i = 1; i < races.length; i++) {
+        const prevDate = new Date(races[i - 1].occurred_at);
+        const currDate = new Date(races[i].occurred_at);
         expect(currDate.getTime()).toBeGreaterThanOrEqual(prevDate.getTime());
       }
     });
 
-    it("should generate activities for multiple contributors", () => {
-      const contributors = ["user1", "user2", "user3"];
-      const activitiesMap = generateActivities(contributors, 5, 10, 30, [
+    it("should generate races for multiple organizers", () => {
+      const organizers = ["user1", "user2", "user3"];
+      const racesMap = generateRaces(organizers, 5, 10, 30, [
         "source-a",
         "source-b",
       ]);
 
-      expect(activitiesMap.size).toBe(3);
-      expect(activitiesMap.has("user1")).toBe(true);
-      expect(activitiesMap.has("user2")).toBe(true);
-      expect(activitiesMap.has("user3")).toBe(true);
+      expect(racesMap.size).toBe(3);
+      expect(racesMap.has("user1")).toBe(true);
+      expect(racesMap.has("user2")).toBe(true);
+      expect(racesMap.has("user3")).toBe(true);
 
-      for (const [, activities] of activitiesMap) {
-        expect(activities.length).toBeGreaterThanOrEqual(5);
-        expect(activities.length).toBeLessThanOrEqual(10);
+      for (const [, races] of racesMap) {
+        expect(races.length).toBeGreaterThanOrEqual(5);
+        expect(races.length).toBeLessThanOrEqual(10);
       }
     });
 
-    it("should generate all activity types", () => {
-      const contributors = ["user1"];
-      const activitiesMap = generateActivities(contributors, 100, 100, 90, [
-        "source-a",
-      ]);
+    it("should generate all race types", () => {
+      const organizers = ["user1"];
+      const racesMap = generateRaces(organizers, 100, 100, 90, ["source-a"]);
 
-      const activities = activitiesMap.get("user1")!;
-      const types = new Set(activities.map((a) => a.activity_definition));
+      const races = racesMap.get("user1")!;
+      const types = new Set(races.map((a) => a.race_definition));
 
-      // With 100 activities, we should have good variety
+      // With 100 races, we should have good variety
       expect(types.size).toBeGreaterThan(5);
     });
 
     it("should use reproducible seed", () => {
-      // Test that using the same seed produces the same activity type
+      // Test that using the same seed produces the same race type
       faker.seed(12345);
       const type1 = faker.helpers.arrayElement(
-        Object.keys(ACTIVITY_TYPES) as Array<keyof typeof ACTIVITY_TYPES>,
+        Object.keys(RACE_TYPES) as Array<keyof typeof RACE_TYPES>,
       );
 
       faker.seed(12345);
       const type2 = faker.helpers.arrayElement(
-        Object.keys(ACTIVITY_TYPES) as Array<keyof typeof ACTIVITY_TYPES>,
+        Object.keys(RACE_TYPES) as Array<keyof typeof RACE_TYPES>,
       );
 
       expect(type1).toBe(type2);
@@ -207,7 +194,7 @@ describe("Dummy Plugin", () => {
       expect(plugin.scrape).toBeDefined();
     });
 
-    it("should setup activity definitions", async () => {
+    it("should setup race definitions", async () => {
       const logger = {
         info: () => {},
         warn: () => {},
@@ -227,13 +214,13 @@ describe("Dummy Plugin", () => {
         logger,
       });
 
-      // Check that activity definitions were created
+      // Check that race definitions were created
       const result = await db.execute(
-        "SELECT COUNT(*) as count FROM activity_definition",
+        "SELECT COUNT(*) as count FROM race_definition",
       );
       const count = (result.rows[0] as { count: number }).count;
 
-      expect(count).toBe(Object.keys(ACTIVITY_TYPES).length);
+      expect(count).toBe(Object.keys(RACE_TYPES).length);
     });
 
     it("should generate data on scrape", async () => {
@@ -261,12 +248,12 @@ describe("Dummy Plugin", () => {
       await plugin.scrape!({
         db,
         config: {
-          contributors: {
+          organizers: {
             count: 10,
-            minActivitiesPerContributor: 5,
-            maxActivitiesPerContributor: 15,
+            minRacesPerOrganizer: 5,
+            maxRacesPerOrganizer: 15,
           },
-          activities: {
+          races: {
             daysBack: 30,
             seed: 42,
           },
@@ -281,22 +268,21 @@ describe("Dummy Plugin", () => {
         logger,
       });
 
-      // Check contributors
-      const contributorsResult = await db.execute(
-        "SELECT COUNT(*) as count FROM contributor",
+      // Check organizers
+      const organizersResult = await db.execute(
+        "SELECT COUNT(*) as count FROM organizer",
       );
-      const contributorCount = (contributorsResult.rows[0] as { count: number })
+      const organizerCount = (organizersResult.rows[0] as { count: number })
         .count;
-      expect(contributorCount).toBe(10);
+      expect(organizerCount).toBe(10);
 
-      // Check activities
-      const activitiesResult = await db.execute(
-        "SELECT COUNT(*) as count FROM activity",
+      // Check races
+      const racesResult = await db.execute(
+        "SELECT COUNT(*) as count FROM race",
       );
-      const activityCount = (activitiesResult.rows[0] as { count: number })
-        .count;
-      expect(activityCount).toBeGreaterThanOrEqual(50); // 10 * 5 minimum
-      expect(activityCount).toBeLessThanOrEqual(150); // 10 * 15 maximum
+      const raceCount = (racesResult.rows[0] as { count: number }).count;
+      expect(raceCount).toBeGreaterThanOrEqual(50); // 10 * 5 minimum
+      expect(raceCount).toBeLessThanOrEqual(150); // 10 * 15 maximum
     });
   });
 });

@@ -4,21 +4,21 @@
 
 import type { Database } from "@starter/leaderboard-api";
 import {
-  contributorAggregateDefinitionQueries,
-  contributorAggregateQueries,
-  contributorQueries,
   createDatabase,
   globalAggregateQueries,
   initializeSchema,
+  organizerAggregateDefinitionQueries,
+  organizerAggregateQueries,
+  organizerQueries,
 } from "@starter/leaderboard-api";
 import { mkdir, readdir, readFile, rm } from "fs/promises";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   exportAggregates,
-  exportContributorAggregateDefinitions,
-  exportContributorAggregates,
   exportGlobalAggregates,
+  exportOrganizerAggregateDefinitions,
+  exportOrganizerAggregates,
 } from "../../exporters/aggregates";
 import { createLogger } from "../../logger";
 
@@ -42,16 +42,16 @@ describe("Aggregate Exporters", () => {
   describe("exportGlobalAggregates", () => {
     it("should export global aggregates to JSON", async () => {
       await globalAggregateQueries.upsert(db, {
-        slug: "total_contributors",
-        name: "Total Contributors",
-        description: "Total number of contributors",
+        slug: "total_organizers",
+        name: "Total Organizers",
+        description: "Total number of organizers",
         value: { type: "number", value: 42, format: "integer" },
         meta: { calculated_at: "2025-01-05T12:00:00Z" },
       });
 
       await globalAggregateQueries.upsert(db, {
-        slug: "total_activities",
-        name: "Total Activities",
+        slug: "total_races",
+        name: "Total Races",
         description: null,
         value: { type: "number", value: 100, format: "integer" },
         meta: null,
@@ -111,21 +111,21 @@ describe("Aggregate Exporters", () => {
     });
   });
 
-  describe("exportContributorAggregateDefinitions", () => {
+  describe("exportOrganizerAggregateDefinitions", () => {
     it("should export aggregate definitions to JSON", async () => {
-      await contributorAggregateDefinitionQueries.upsert(db, {
+      await organizerAggregateDefinitionQueries.upsert(db, {
         slug: "pr_merged_count",
         name: "PRs Merged",
         description: "Number of pull requests merged",
       });
 
-      await contributorAggregateDefinitionQueries.upsert(db, {
+      await organizerAggregateDefinitionQueries.upsert(db, {
         slug: "code_review_count",
         name: "Code Reviews",
         description: null,
       });
 
-      await exportContributorAggregateDefinitions(db, TEST_DATA_DIR, logger);
+      await exportOrganizerAggregateDefinitions(db, TEST_DATA_DIR, logger);
 
       const content = await readFile(
         join(TEST_DATA_DIR, "aggregates", "definitions.json"),
@@ -139,10 +139,10 @@ describe("Aggregate Exporters", () => {
     });
   });
 
-  describe("exportContributorAggregates", () => {
+  describe("exportOrganizerAggregates", () => {
     beforeEach(async () => {
-      // Setup contributors and definitions
-      await contributorQueries.upsert(db, {
+      // Setup organizers and definitions
+      await organizerQueries.upsert(db, {
         username: "alice",
         name: "Alice",
         title: null,
@@ -152,7 +152,7 @@ describe("Aggregate Exporters", () => {
         meta: null,
       });
 
-      await contributorQueries.upsert(db, {
+      await organizerQueries.upsert(db, {
         username: "bob",
         name: "Bob",
         title: null,
@@ -162,38 +162,38 @@ describe("Aggregate Exporters", () => {
         meta: null,
       });
 
-      await contributorAggregateDefinitionQueries.upsert(db, {
-        slug: "activity_count",
-        name: "Activity Count",
+      await organizerAggregateDefinitionQueries.upsert(db, {
+        slug: "race_count",
+        name: "Race Count",
         description: null,
       });
 
-      await contributorAggregateDefinitionQueries.upsert(db, {
+      await organizerAggregateDefinitionQueries.upsert(db, {
         slug: "total_points",
         name: "Total Points",
         description: null,
       });
     });
 
-    it("should export contributor aggregates to JSONL files", async () => {
-      await contributorAggregateQueries.upsert(db, {
-        aggregate: "activity_count",
-        contributor: "alice",
+    it("should export organizer aggregates to JSONL files", async () => {
+      await organizerAggregateQueries.upsert(db, {
+        aggregate: "race_count",
+        organizer: "alice",
         value: { type: "number", value: 42, format: "integer" },
         meta: { calculated_at: "2025-01-05T12:00:00Z" },
       });
 
-      await contributorAggregateQueries.upsert(db, {
+      await organizerAggregateQueries.upsert(db, {
         aggregate: "total_points",
-        contributor: "alice",
+        organizer: "alice",
         value: { type: "number", value: 250, format: "integer" },
         meta: null,
       });
 
-      await exportContributorAggregates(db, TEST_DATA_DIR, logger);
+      await exportOrganizerAggregates(db, TEST_DATA_DIR, logger);
 
       const content = await readFile(
-        join(TEST_DATA_DIR, "aggregates", "contributors", "alice.jsonl"),
+        join(TEST_DATA_DIR, "aggregates", "organizers", "alice.jsonl"),
         "utf-8",
       );
       const lines = content.trim().split("\n");
@@ -201,38 +201,38 @@ describe("Aggregate Exporters", () => {
       expect(lines).toHaveLength(2);
 
       const aggregate1 = JSON.parse(lines[0]);
-      expect(aggregate1.contributor).toBe("alice");
+      expect(aggregate1.organizer).toBe("alice");
       expect(aggregate1.value.type).toBe("number");
     });
 
-    it("should create separate files for each contributor", async () => {
-      await contributorAggregateQueries.upsert(db, {
-        aggregate: "activity_count",
-        contributor: "alice",
+    it("should create separate files for each organizer", async () => {
+      await organizerAggregateQueries.upsert(db, {
+        aggregate: "race_count",
+        organizer: "alice",
         value: { type: "number", value: 42, format: "integer" },
         meta: null,
       });
 
-      await contributorAggregateQueries.upsert(db, {
-        aggregate: "activity_count",
-        contributor: "bob",
+      await organizerAggregateQueries.upsert(db, {
+        aggregate: "race_count",
+        organizer: "bob",
         value: { type: "number", value: 30, format: "integer" },
         meta: null,
       });
 
-      await exportContributorAggregates(db, TEST_DATA_DIR, logger);
+      await exportOrganizerAggregates(db, TEST_DATA_DIR, logger);
 
       const files = await readdir(
-        join(TEST_DATA_DIR, "aggregates", "contributors"),
+        join(TEST_DATA_DIR, "aggregates", "organizers"),
       );
       expect(files).toContain("alice.jsonl");
       expect(files).toContain("bob.jsonl");
     });
 
     it("should handle aggregates with units", async () => {
-      await contributorAggregateQueries.upsert(db, {
-        aggregate: "activity_count",
-        contributor: "alice",
+      await organizerAggregateQueries.upsert(db, {
+        aggregate: "race_count",
+        organizer: "alice",
         value: {
           type: "number",
           value: 7200000,
@@ -242,10 +242,10 @@ describe("Aggregate Exporters", () => {
         meta: null,
       });
 
-      await exportContributorAggregates(db, TEST_DATA_DIR, logger);
+      await exportOrganizerAggregates(db, TEST_DATA_DIR, logger);
 
       const content = await readFile(
-        join(TEST_DATA_DIR, "aggregates", "contributors", "alice.jsonl"),
+        join(TEST_DATA_DIR, "aggregates", "organizers", "alice.jsonl"),
         "utf-8",
       );
       const aggregate = JSON.parse(content.trim());
@@ -258,20 +258,20 @@ describe("Aggregate Exporters", () => {
   describe("exportAggregates", () => {
     it("should export all aggregate data", async () => {
       await globalAggregateQueries.upsert(db, {
-        slug: "total_contributors",
-        name: "Total Contributors",
+        slug: "total_organizers",
+        name: "Total Organizers",
         description: null,
         value: { type: "number", value: 42, format: "integer" },
         meta: null,
       });
 
-      await contributorAggregateDefinitionQueries.upsert(db, {
-        slug: "activity_count",
-        name: "Activity Count",
+      await organizerAggregateDefinitionQueries.upsert(db, {
+        slug: "race_count",
+        name: "Race Count",
         description: null,
       });
 
-      await contributorQueries.upsert(db, {
+      await organizerQueries.upsert(db, {
         username: "alice",
         name: "Alice",
         title: null,
@@ -281,9 +281,9 @@ describe("Aggregate Exporters", () => {
         meta: null,
       });
 
-      await contributorAggregateQueries.upsert(db, {
-        aggregate: "activity_count",
-        contributor: "alice",
+      await organizerAggregateQueries.upsert(db, {
+        aggregate: "race_count",
+        organizer: "alice",
         value: { type: "number", value: 42, format: "integer" },
         meta: null,
       });
@@ -299,14 +299,14 @@ describe("Aggregate Exporters", () => {
         join(TEST_DATA_DIR, "aggregates", "definitions.json"),
         "utf-8",
       );
-      const contributorContent = await readFile(
-        join(TEST_DATA_DIR, "aggregates", "contributors", "alice.jsonl"),
+      const organizerContent = await readFile(
+        join(TEST_DATA_DIR, "aggregates", "organizers", "alice.jsonl"),
         "utf-8",
       );
 
       expect(JSON.parse(globalContent)).toHaveLength(1);
       expect(JSON.parse(definitionsContent)).toHaveLength(1);
-      expect(contributorContent.trim()).toBeTruthy();
+      expect(organizerContent.trim()).toBeTruthy();
     });
   });
 });

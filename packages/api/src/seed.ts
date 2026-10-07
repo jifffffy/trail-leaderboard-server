@@ -6,7 +6,7 @@
 import { mkdir, writeFile } from "fs/promises";
 import matter from "gray-matter";
 import { join } from "path";
-import type { Activity, ActivityDefinition, Contributor } from "./types";
+import type { Organizer, Race, RaceDefinition } from "./types";
 
 const FIRST_NAMES = [
   "Alice",
@@ -60,7 +60,7 @@ const LAST_NAMES = [
   "Martin",
 ];
 
-const ACTIVITY_DEFS: ActivityDefinition[] = [
+const RACE_DEFS: RaceDefinition[] = [
   {
     slug: "entry_created",
     name: "Entry Created",
@@ -173,7 +173,7 @@ function generateBio(name: string): string {
     .replace("{years}", years.toString())}`;
 }
 
-function generateContributor(): Contributor {
+function generateOrganizer(): Organizer {
   const firstName = randomElement(FIRST_NAMES);
   const lastName = randomElement(LAST_NAMES);
   const username = generateUsername(firstName, lastName);
@@ -207,51 +207,51 @@ function generateContributor(): Contributor {
   };
 }
 
-function generateActivity(
-  contributor: string,
-  activityDef: ActivityDefinition,
+function generateRace(
+  organizer: string,
+  raceDef: RaceDefinition,
   index: number,
-): Activity {
+): Race {
   const daysAgo = randomInt(0, 180);
   const occurredAt = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
 
   return {
-    slug: `${contributor}-${activityDef.slug}-${index}`,
-    contributor,
-    activity_definition: activityDef.slug,
-    title: `${activityDef.name} #${index}`,
+    slug: `${organizer}-${raceDef.slug}-${index}`,
+    organizer,
+    race_definition: raceDef.slug,
+    title: `${raceDef.name} #${index}`,
     occurred_at: occurredAt.toISOString(),
     link: `https://example.com/entries/${randomInt(1, 9999)}`,
     text: null,
-    points: activityDef.points,
+    points: raceDef.points,
     meta: {
       source: randomElement(["source-a", "source-b", "source-c"]),
     },
   };
 }
 
-async function writeContributorMarkdown(
+async function writeOrganizerMarkdown(
   outputDir: string,
-  contributor: Contributor,
+  organizer: Organizer,
 ): Promise<void> {
-  const { username, bio, ...frontmatter } = contributor;
+  const { username, bio, ...frontmatter } = organizer;
 
   const content = matter.stringify(bio || "", {
     ...frontmatter,
     username,
   });
 
-  const filePath = join(outputDir, "contributors", `${username}.md`);
+  const filePath = join(outputDir, "organizers", `${username}.md`);
   await writeFile(filePath, content, "utf8");
 }
 
-async function writeActivitiesJsonl(
+async function writeRacesJsonl(
   outputDir: string,
   username: string,
-  activities: Activity[],
+  races: Race[],
 ): Promise<void> {
-  const content = activities.map((a) => JSON.stringify(a)).join("\n");
-  const filePath = join(outputDir, "activities", `${username}.jsonl`);
+  const content = races.map((a) => JSON.stringify(a)).join("\n");
+  const filePath = join(outputDir, "races", `${username}.jsonl`);
   await writeFile(filePath, content + "\n", "utf8");
 }
 
@@ -264,49 +264,47 @@ async function main() {
   console.log(`Generating seed data to: ${outputDir}`);
 
   // Create directories
-  await mkdir(join(outputDir, "contributors"), { recursive: true });
-  await mkdir(join(outputDir, "activities"), { recursive: true });
+  await mkdir(join(outputDir, "organizers"), { recursive: true });
+  await mkdir(join(outputDir, "races"), { recursive: true });
 
-  // Generate contributors
-  const numContributors = randomInt(15, 30);
-  const contributors: Contributor[] = [];
+  // Generate organizers
+  const numOrganizers = randomInt(15, 30);
+  const organizers: Organizer[] = [];
 
-  for (let i = 0; i < numContributors; i++) {
-    const contributor = generateContributor();
-    contributors.push(contributor);
-    await writeContributorMarkdown(outputDir, contributor);
+  for (let i = 0; i < numOrganizers; i++) {
+    const organizer = generateOrganizer();
+    organizers.push(organizer);
+    await writeOrganizerMarkdown(outputDir, organizer);
   }
 
-  console.log(`✓ Generated ${contributors.length} contributors`);
+  console.log(`✓ Generated ${organizers.length} organizers`);
 
-  // Generate activities for each contributor
-  let totalActivities = 0;
+  // Generate races for each organizer
+  let totalRaces = 0;
 
-  for (const contributor of contributors) {
-    const numActivities = randomInt(5, 50);
-    const activities: Activity[] = [];
+  for (const organizer of organizers) {
+    const numRaces = randomInt(5, 50);
+    const races: Race[] = [];
 
-    for (let i = 0; i < numActivities; i++) {
-      const activityDef = randomElement(ACTIVITY_DEFS);
-      const activity = generateActivity(contributor.username, activityDef, i);
-      activities.push(activity);
+    for (let i = 0; i < numRaces; i++) {
+      const raceDef = randomElement(RACE_DEFS);
+      const race = generateRace(organizer.username, raceDef, i);
+      races.push(race);
     }
 
     // Sort by date
-    activities.sort((a, b) => a.occurred_at.localeCompare(b.occurred_at));
+    races.sort((a, b) => a.occurred_at.localeCompare(b.occurred_at));
 
-    await writeActivitiesJsonl(outputDir, contributor.username, activities);
-    totalActivities += activities.length;
+    await writeRacesJsonl(outputDir, organizer.username, races);
+    totalRaces += races.length;
   }
 
-  console.log(`✓ Generated ${totalActivities} activities`);
+  console.log(`✓ Generated ${totalRaces} races`);
 
-  // Write activity definitions info (for reference only)
-  const defsPath = join(outputDir, "activity_definitions.json");
-  await writeFile(defsPath, JSON.stringify(ACTIVITY_DEFS, null, 2), "utf8");
-  console.log(
-    `✓ Wrote ${ACTIVITY_DEFS.length} activity definitions to ${defsPath}`,
-  );
+  // Write race definitions info (for reference only)
+  const defsPath = join(outputDir, "race_definitions.json");
+  await writeFile(defsPath, JSON.stringify(RACE_DEFS, null, 2), "utf8");
+  console.log(`✓ Wrote ${RACE_DEFS.length} race definitions to ${defsPath}`);
 
   console.log("\n✅ Seed data generation complete!");
   console.log(`\nTo use this data:`);

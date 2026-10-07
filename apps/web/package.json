@@ -11,14 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage",
-    "setup:icons": "tsx scripts/setup-icons.ts",
-    "setup:theme": "tsx scripts/setup-theme.ts",
-    "setup:db": "tsx scripts/setup-db.ts",
-    "setup:assets": "tsx scripts/setup-assets.ts",
-    "setup:avatars": "tsx scripts/setup-avatars.ts",
-    "predev": "pnpm setup:icons && pnpm setup:theme && pnpm setup:db && pnpm setup:assets && pnpm setup:avatars",
-    "prebuild": "pnpm setup:icons && pnpm setup:theme && pnpm setup:db && pnpm setup:assets && pnpm setup:avatars"
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@codemirror/lang-sql": "^6.10.0",

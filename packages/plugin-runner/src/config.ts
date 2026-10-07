@@ -56,7 +56,7 @@ const StreakBadgeRuleConfigSchema = z.object({
   badge_slug: z.string(),
   enabled: z.boolean().default(true),
   streak_type: z.enum(["daily", "weekly", "monthly"]),
-  activity_definitions: z.array(z.string()).optional(),
+  race_definitions: z.array(z.string()).optional(),
   thresholds: z.array(
     z.object({
       variant: z.string(),

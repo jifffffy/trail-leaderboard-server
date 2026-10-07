@@ -3,12 +3,12 @@
  */
 
 import {
-  activityQueries,
   badgeDefinitionQueries,
-  contributorAggregateDefinitionQueries,
-  contributorAggregateQueries,
-  contributorBadgeQueries,
   globalAggregateQueries,
+  organizerAggregateDefinitionQueries,
+  organizerAggregateQueries,
+  organizerBadgeQueries,
+  raceQueries,
 } from "@starter/leaderboard-api";
 import { z } from "zod";
 import type { ServerContext, ToolResult } from "../types.js";
@@ -21,21 +21,21 @@ export const GetBadgesSchema = z.object({
   username: z
     .string()
     .optional()
-    .describe("Get badges for a specific contributor"),
+    .describe("Get badges for a specific organizer"),
   badge_slug: z.string().optional().describe("Get specific badge definition"),
 });
 
 /**
- * Get badge definitions or contributor badges
+ * Get badge definitions or organizer badges
  */
 export async function getBadges(
   args: z.infer<typeof GetBadgesSchema>,
   context: ServerContext,
 ): Promise<ToolResult> {
   try {
-    // Get badges for a specific contributor
+    // Get badges for a specific organizer
     if (args.username) {
-      const badges = await contributorBadgeQueries.getByContributor(
+      const badges = await organizerBadgeQueries.getByOrganizer(
         context.db,
         args.username,
       );
@@ -90,7 +90,7 @@ export async function getRecentBadges(
   try {
     const limit = Math.min(args.limit || 20, 100);
 
-    const recentBadges = await contributorBadgeQueries.getRecentEnriched(
+    const recentBadges = await organizerBadgeQueries.getRecentEnriched(
       context.db,
       limit,
     );
@@ -112,7 +112,7 @@ export const GetTopBadgeEarnersSchema = z.object({
 });
 
 /**
- * Get contributors with the most badges
+ * Get organizers with the most badges
  */
 export async function getTopBadgeEarners(
   args: z.infer<typeof GetTopBadgeEarnersSchema>,
@@ -121,7 +121,7 @@ export async function getTopBadgeEarners(
   try {
     const limit = Math.min(args.limit || 10, 100);
 
-    const topEarners = await contributorBadgeQueries.getTopEarnersEnriched(
+    const topEarners = await organizerBadgeQueries.getTopEarnersEnriched(
       context.db,
       limit,
     );
@@ -183,10 +183,10 @@ export async function getGlobalAggregates(
 }
 
 /**
- * Schema for get_contributor_aggregates tool
+ * Schema for get_organizer_aggregates tool
  */
-export const GetContributorAggregatesSchema = z.object({
-  username: z.string().describe("Contributor username"),
+export const GetOrganizerAggregatesSchema = z.object({
+  username: z.string().describe("Organizer username"),
   slugs: z
     .array(z.string())
     .optional()
@@ -194,20 +194,19 @@ export const GetContributorAggregatesSchema = z.object({
 });
 
 /**
- * Get aggregates for a specific contributor
+ * Get aggregates for a specific organizer
  */
-export async function getContributorAggregates(
-  args: z.infer<typeof GetContributorAggregatesSchema>,
+export async function getOrganizerAggregates(
+  args: z.infer<typeof GetOrganizerAggregatesSchema>,
   context: ServerContext,
 ): Promise<ToolResult> {
   try {
     if (args.slugs && args.slugs.length > 0) {
-      const aggregates =
-        await contributorAggregateQueries.getByContributorEnriched(
-          context.db,
-          args.username,
-          args.slugs,
-        );
+      const aggregates = await organizerAggregateQueries.getByOrganizerEnriched(
+        context.db,
+        args.username,
+        args.slugs,
+      );
 
       return createSuccessResult({
         username: args.username,
@@ -216,7 +215,7 @@ export async function getContributorAggregates(
       });
     }
 
-    const aggregates = await contributorAggregateQueries.getByContributor(
+    const aggregates = await organizerAggregateQueries.getByOrganizer(
       context.db,
       args.username,
     );
@@ -243,7 +242,7 @@ export const GetAggregateDefinitionsSchema = z.object({
 });
 
 /**
- * Get contributor aggregate definitions
+ * Get organizer aggregate definitions
  */
 export async function getAggregateDefinitions(
   args: z.infer<typeof GetAggregateDefinitionsSchema>,
@@ -251,8 +250,8 @@ export async function getAggregateDefinitions(
 ): Promise<ToolResult> {
   try {
     const definitions = args.visible_only
-      ? await contributorAggregateDefinitionQueries.getAllVisible(context.db)
-      : await contributorAggregateDefinitionQueries.getAll(context.db);
+      ? await organizerAggregateDefinitionQueries.getAllVisible(context.db)
+      : await organizerAggregateDefinitionQueries.getAll(context.db);
 
     return createSuccessResult({
       definitions,
@@ -264,57 +263,57 @@ export async function getAggregateDefinitions(
 }
 
 /**
- * Schema for batch_get_contributor_stats tool
+ * Schema for batch_get_organizer_stats tool
  */
-export const BatchGetContributorStatsSchema = z.object({
-  usernames: z.array(z.string()).describe("List of contributor usernames"),
+export const BatchGetOrganizerStatsSchema = z.object({
+  usernames: z.array(z.string()).describe("List of organizer usernames"),
   include_aggregates: z
     .boolean()
     .optional()
     .default(false)
-    .describe("Include contributor aggregates"),
+    .describe("Include organizer aggregates"),
   include_badges: z
     .boolean()
     .optional()
     .default(false)
-    .describe("Include contributor badges"),
+    .describe("Include organizer badges"),
 });
 
 /**
- * Get statistics for multiple contributors in batch
+ * Get statistics for multiple organizers in batch
  */
-export async function batchGetContributorStats(
-  args: z.infer<typeof BatchGetContributorStatsSchema>,
+export async function batchGetOrganizerStats(
+  args: z.infer<typeof BatchGetOrganizerStatsSchema>,
   context: ServerContext,
 ): Promise<ToolResult> {
   try {
     const results = await Promise.all(
       args.usernames.map(async (username) => {
-        const totalPoints = await activityQueries.getTotalPointsByContributor(
+        const totalPoints = await raceQueries.getTotalPointsByOrganizer(
           context.db,
           username,
         );
 
-        const activityCount = await context.db.execute(
-          "SELECT COUNT(*) as count FROM activity WHERE contributor = ?",
+        const raceCount = await context.db.execute(
+          "SELECT COUNT(*) as count FROM race WHERE organizer = ?",
           [username],
         );
 
         const stats: any = {
           username,
           totalPoints,
-          activityCount: (activityCount.rows[0] as any).count,
+          raceCount: (raceCount.rows[0] as any).count,
         };
 
         if (args.include_aggregates) {
-          stats.aggregates = await contributorAggregateQueries.getByContributor(
+          stats.aggregates = await organizerAggregateQueries.getByOrganizer(
             context.db,
             username,
           );
         }
 
         if (args.include_badges) {
-          stats.badges = await contributorBadgeQueries.getByContributor(
+          stats.badges = await organizerBadgeQueries.getByOrganizer(
             context.db,
             username,
           );

@@ -8,8 +8,8 @@ import type { Database } from "./types";
  * SQL schema for the leaderboard database
  */
 export const SCHEMA = `
--- Contributors table
-CREATE TABLE IF NOT EXISTS contributor (
+-- Organizers table
+CREATE TABLE IF NOT EXISTS organizer (
     username                VARCHAR PRIMARY KEY COLLATE NOCASE,
     name                    VARCHAR,
     title                   VARCHAR,
@@ -19,8 +19,8 @@ CREATE TABLE IF NOT EXISTS contributor (
     meta                    JSON
 );
 
--- Activity definitions table (populated by plugins)
-CREATE TABLE IF NOT EXISTS activity_definition (
+-- Race definitions table (populated by plugins)
+CREATE TABLE IF NOT EXISTS race_definition (
     slug                    VARCHAR PRIMARY KEY,
     name                    VARCHAR NOT NULL,
     description             TEXT NOT NULL,
@@ -28,11 +28,11 @@ CREATE TABLE IF NOT EXISTS activity_definition (
     icon                    VARCHAR
 );
 
--- Activities table
-CREATE TABLE IF NOT EXISTS activity (
+-- Races table
+CREATE TABLE IF NOT EXISTS race (
     slug                    VARCHAR PRIMARY KEY,
-    contributor             VARCHAR REFERENCES contributor(username) NOT NULL,
-    activity_definition     VARCHAR REFERENCES activity_definition(slug) NOT NULL,
+    organizer             VARCHAR REFERENCES organizer(username) NOT NULL,
+    race_definition     VARCHAR REFERENCES race_definition(slug) NOT NULL,
     title                   VARCHAR,
     occurred_at              TIMESTAMP NOT NULL,
     link                    VARCHAR,
@@ -42,9 +42,9 @@ CREATE TABLE IF NOT EXISTS activity (
 );
 
 -- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_activity_occurred_at ON activity(occurred_at);
-CREATE INDEX IF NOT EXISTS idx_activity_contributor ON activity(contributor);
-CREATE INDEX IF NOT EXISTS idx_activity_definition ON activity(activity_definition);
+CREATE INDEX IF NOT EXISTS idx_race_occurred_at ON race(occurred_at);
+CREATE INDEX IF NOT EXISTS idx_race_organizer ON race(organizer);
+CREATE INDEX IF NOT EXISTS idx_race_definition ON race(race_definition);
 
 -- Global aggregates table (org-level metrics)
 CREATE TABLE IF NOT EXISTS global_aggregate (
@@ -56,25 +56,25 @@ CREATE TABLE IF NOT EXISTS global_aggregate (
     meta                    JSON
 );
 
--- Contributor aggregate definitions table
-CREATE TABLE IF NOT EXISTS contributor_aggregate_definition (
+-- Organizer aggregate definitions table
+CREATE TABLE IF NOT EXISTS organizer_aggregate_definition (
     slug                    VARCHAR PRIMARY KEY,
     name                    VARCHAR NOT NULL,
     description             TEXT,
     hidden                  BOOLEAN DEFAULT FALSE
 );
 
--- Contributor aggregates table (per-contributor metrics)
-CREATE TABLE IF NOT EXISTS contributor_aggregate (
-    aggregate               VARCHAR REFERENCES contributor_aggregate_definition(slug) NOT NULL,
-    contributor             VARCHAR REFERENCES contributor(username) NOT NULL,
+-- Organizer aggregates table (per-organizer metrics)
+CREATE TABLE IF NOT EXISTS organizer_aggregate (
+    aggregate               VARCHAR REFERENCES organizer_aggregate_definition(slug) NOT NULL,
+    organizer             VARCHAR REFERENCES organizer(username) NOT NULL,
     value                   JSON NOT NULL,
     meta                    JSON,
-    PRIMARY KEY (aggregate, contributor)
+    PRIMARY KEY (aggregate, organizer)
 );
 
-CREATE INDEX IF NOT EXISTS idx_contributor_aggregate_contributor ON contributor_aggregate(contributor);
-CREATE INDEX IF NOT EXISTS idx_contributor_aggregate_aggregate ON contributor_aggregate(aggregate);
+CREATE INDEX IF NOT EXISTS idx_organizer_aggregate_organizer ON organizer_aggregate(organizer);
+CREATE INDEX IF NOT EXISTS idx_organizer_aggregate_aggregate ON organizer_aggregate(aggregate);
 
 -- Badge definitions table
 CREATE TABLE IF NOT EXISTS badge_definition (
@@ -84,20 +84,20 @@ CREATE TABLE IF NOT EXISTS badge_definition (
     variants                JSON NOT NULL
 );
 
--- Contributor badges table (achievements earned by contributors)
-CREATE TABLE IF NOT EXISTS contributor_badge (
+-- Organizer badges table (achievements earned by organizers)
+CREATE TABLE IF NOT EXISTS organizer_badge (
     slug                    VARCHAR PRIMARY KEY,
     badge                   VARCHAR REFERENCES badge_definition(slug) NOT NULL,
-    contributor             VARCHAR REFERENCES contributor(username) NOT NULL,
+    organizer             VARCHAR REFERENCES organizer(username) NOT NULL,
     variant                 VARCHAR NOT NULL,
     achieved_on             DATE NOT NULL,
     meta                    JSON
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_contributor_badge_unique ON contributor_badge(badge, contributor, variant);
-CREATE INDEX IF NOT EXISTS idx_contributor_badge_contributor ON contributor_badge(contributor);
-CREATE INDEX IF NOT EXISTS idx_contributor_badge_badge ON contributor_badge(badge);
-CREATE INDEX IF NOT EXISTS idx_contributor_badge_achieved_on ON contributor_badge(achieved_on);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_organizer_badge_unique ON organizer_badge(badge, organizer, variant);
+CREATE INDEX IF NOT EXISTS idx_organizer_badge_organizer ON organizer_badge(organizer);
+CREATE INDEX IF NOT EXISTS idx_organizer_badge_badge ON organizer_badge(badge);
+CREATE INDEX IF NOT EXISTS idx_organizer_badge_achieved_on ON organizer_badge(achieved_on);
 `;
 
 /**
@@ -118,26 +118,26 @@ export async function initializeSchema(db: Database): Promise<void> {
  * Clear all data from tables (useful for testing)
  */
 export async function clearAllData(db: Database): Promise<void> {
-  await db.execute("DELETE FROM contributor_badge");
+  await db.execute("DELETE FROM organizer_badge");
   await db.execute("DELETE FROM badge_definition");
-  await db.execute("DELETE FROM contributor_aggregate");
-  await db.execute("DELETE FROM contributor_aggregate_definition");
+  await db.execute("DELETE FROM organizer_aggregate");
+  await db.execute("DELETE FROM organizer_aggregate_definition");
   await db.execute("DELETE FROM global_aggregate");
-  await db.execute("DELETE FROM activity");
-  await db.execute("DELETE FROM contributor");
-  await db.execute("DELETE FROM activity_definition");
+  await db.execute("DELETE FROM race");
+  await db.execute("DELETE FROM organizer");
+  await db.execute("DELETE FROM race_definition");
 }
 
 /**
  * Drop all tables (useful for testing)
  */
 export async function dropAllTables(db: Database): Promise<void> {
-  await db.execute("DROP TABLE IF EXISTS contributor_badge");
+  await db.execute("DROP TABLE IF EXISTS organizer_badge");
   await db.execute("DROP TABLE IF EXISTS badge_definition");
-  await db.execute("DROP TABLE IF EXISTS contributor_aggregate");
-  await db.execute("DROP TABLE IF EXISTS contributor_aggregate_definition");
+  await db.execute("DROP TABLE IF EXISTS organizer_aggregate");
+  await db.execute("DROP TABLE IF EXISTS organizer_aggregate_definition");
   await db.execute("DROP TABLE IF EXISTS global_aggregate");
-  await db.execute("DROP TABLE IF EXISTS activity");
-  await db.execute("DROP TABLE IF EXISTS activity_definition");
-  await db.execute("DROP TABLE IF EXISTS contributor");
+  await db.execute("DROP TABLE IF EXISTS race");
+  await db.execute("DROP TABLE IF EXISTS race_definition");
+  await db.execute("DROP TABLE IF EXISTS organizer");
 }

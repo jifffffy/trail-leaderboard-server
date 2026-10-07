@@ -2,6 +2,6 @@
  * Export all tools
  */
 
-export * from "./activities.js";
 export * from "./aggregates.js";
-export * from "./contributors.js";
+export * from "./organizers.js";
+export * from "./races.js";

@@ -5,7 +5,7 @@
 import type { Database, Logger } from "@starter/leaderboard-api";
 import {
   badgeDefinitionQueries,
-  contributorBadgeQueries,
+  organizerBadgeQueries,
 } from "@starter/leaderboard-api";
 import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
@@ -29,39 +29,39 @@ export async function exportBadgeDefinitions(
 }
 
 /**
- * Export contributor badges to badges/contributors/*.jsonl
+ * Export organizer badges to badges/organizers/*.jsonl
  */
-export async function exportContributorBadges(
+export async function exportOrganizerBadges(
   db: Database,
   dataDir: string,
   logger: Logger,
 ): Promise<void> {
-  const contributorsDir = join(dataDir, "badges", "contributors");
-  await mkdir(contributorsDir, { recursive: true });
+  const organizersDir = join(dataDir, "badges", "organizers");
+  await mkdir(organizersDir, { recursive: true });
 
-  const badges = await contributorBadgeQueries.getAll(db);
+  const badges = await organizerBadgeQueries.getAll(db);
 
-  // Group by contributor
-  const byContributor = new Map<string, typeof badges>();
+  // Group by organizer
+  const byOrganizer = new Map<string, typeof badges>();
   for (const badge of badges) {
-    if (!byContributor.has(badge.contributor)) {
-      byContributor.set(badge.contributor, []);
+    if (!byOrganizer.has(badge.organizer)) {
+      byOrganizer.set(badge.organizer, []);
     }
-    byContributor.get(badge.contributor)!.push(badge);
+    byOrganizer.get(badge.organizer)!.push(badge);
   }
 
-  // Write one file per contributor
-  for (const [username, contributorBadges] of byContributor) {
-    const lines = contributorBadges.map((b) => JSON.stringify(b)).join("\n");
+  // Write one file per organizer
+  for (const [username, organizerBadges] of byOrganizer) {
+    const lines = organizerBadges.map((b) => JSON.stringify(b)).join("\n");
     await writeFile(
-      join(contributorsDir, `${username}.jsonl`),
+      join(organizersDir, `${username}.jsonl`),
       lines + "\n",
       "utf-8",
     );
   }
 
   logger.info(
-    `Exported ${badges.length} contributor badges for ${byContributor.size} contributors`,
+    `Exported ${badges.length} organizer badges for ${byOrganizer.size} organizers`,
   );
 }
 
@@ -75,5 +75,5 @@ export async function exportBadges(
 ): Promise<void> {
   logger.info("Exporting badges");
   await exportBadgeDefinitions(db, dataDir, logger);
-  await exportContributorBadges(db, dataDir, logger);
+  await exportOrganizerBadges(db, dataDir, logger);
 }
