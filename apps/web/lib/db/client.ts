@@ -1,0 +1,38 @@
+/**
+ * LibSQL client for Next.js SSG
+ * Reads from the persisted database file during build time
+ */
+
+import type { Database } from "@starter/leaderboard-api";
+import {
+  createDatabase,
+  getDataDir,
+  getDatabaseUrl,
+} from "@starter/leaderboard-api";
+
+let cachedDb: Database | null = null;
+
+/**
+ * Get or create database instance for SSG
+ * Uses the persisted database file from data-repo
+ */
+export function getDatabase(): Database {
+  if (cachedDb) {
+    return cachedDb;
+  }
+
+  const dbUrl = getDatabaseUrl(getDataDir());
+
+  cachedDb = createDatabase(dbUrl);
+  return cachedDb;
+}
+
+/**
+ * Close database connection (useful for cleanup)
+ */
+export async function closeDatabase(): Promise<void> {
+  if (cachedDb) {
+    await cachedDb.close();
+    cachedDb = null;
+  }
+}

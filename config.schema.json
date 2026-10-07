@@ -1,0 +1,417 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Leaderboard Configuration Schema",
+  "description": "JSON Schema for leaderboard config.yaml file",
+  "type": "object",
+  "properties": {
+    "org": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "logo_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "start_date": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "url",
+        "logo_url"
+      ],
+      "additionalProperties": false
+    },
+    "observability": {
+      "type": "object",
+      "properties": {
+        "sentry": {
+          "type": "object",
+          "properties": {
+            "dsn": {
+              "type": "string"
+            },
+            "enabled": {
+              "default": true,
+              "type": "boolean"
+            },
+            "environment": {
+              "type": "string"
+            },
+            "release": {
+              "type": "string"
+            },
+            "traces_sample_rate": {
+              "default": 0,
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "max_events_per_run": {
+              "default": 100,
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "enabled",
+            "traces_sample_rate",
+            "max_events_per_run"
+          ],
+          "additionalProperties": false
+        },
+        "fail_fast": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "fail_fast"
+      ],
+      "additionalProperties": false
+    },
+    "leaderboard": {
+      "type": "object",
+      "properties": {
+        "plugins": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "config": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            },
+            "required": [
+              "source"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "badges": {
+          "type": "object",
+          "properties": {
+            "definitions": {
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "variants": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "description": {
+                          "type": "string"
+                        },
+                        "svg_url": {
+                          "type": "string"
+                        },
+                        "order": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "description",
+                        "svg_url"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "slug",
+                  "name",
+                  "description",
+                  "variants"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "rules": {
+              "default": [],
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "threshold"
+                      },
+                      "badge_slug": {
+                        "type": "string"
+                      },
+                      "enabled": {
+                        "default": true,
+                        "type": "boolean"
+                      },
+                      "aggregate_slug": {
+                        "type": "string"
+                      },
+                      "thresholds": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "variant": {
+                              "type": "string"
+                            },
+                            "value": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "variant",
+                            "value"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "badge_slug",
+                      "enabled",
+                      "aggregate_slug",
+                      "thresholds"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "streak"
+                      },
+                      "badge_slug": {
+                        "type": "string"
+                      },
+                      "enabled": {
+                        "default": true,
+                        "type": "boolean"
+                      },
+                      "streak_type": {
+                        "type": "string",
+                        "enum": [
+                          "daily",
+                          "weekly",
+                          "monthly"
+                        ]
+                      },
+                      "activity_definitions": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "thresholds": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "variant": {
+                              "type": "string"
+                            },
+                            "days": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "variant",
+                            "days"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "badge_slug",
+                      "enabled",
+                      "streak_type",
+                      "thresholds"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "growth"
+                      },
+                      "badge_slug": {
+                        "type": "string"
+                      },
+                      "enabled": {
+                        "default": true,
+                        "type": "boolean"
+                      },
+                      "aggregate_slug": {
+                        "type": "string"
+                      },
+                      "period": {
+                        "type": "string",
+                        "enum": [
+                          "week",
+                          "month",
+                          "year"
+                        ]
+                      },
+                      "thresholds": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "variant": {
+                              "type": "string"
+                            },
+                            "percentage_increase": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "variant",
+                            "percentage_increase"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "badge_slug",
+                      "enabled",
+                      "aggregate_slug",
+                      "period",
+                      "thresholds"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "const": "composite"
+                      },
+                      "badge_slug": {
+                        "type": "string"
+                      },
+                      "enabled": {
+                        "default": true,
+                        "type": "boolean"
+                      },
+                      "operator": {
+                        "type": "string",
+                        "enum": [
+                          "AND",
+                          "OR"
+                        ]
+                      },
+                      "conditions": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "aggregate_slug": {
+                              "type": "string"
+                            },
+                            "operator": {
+                              "type": "string",
+                              "enum": [
+                                ">",
+                                "<",
+                                ">=",
+                                "<=",
+                                "==",
+                                "!="
+                              ]
+                            },
+                            "value": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "aggregate_slug",
+                            "operator",
+                            "value"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "variant": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "badge_slug",
+                      "enabled",
+                      "operator",
+                      "conditions",
+                      "variant"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          },
+          "required": [
+            "definitions",
+            "rules"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "org",
+    "leaderboard"
+  ],
+  "additionalProperties": false
+}

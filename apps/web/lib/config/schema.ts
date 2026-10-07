@@ -1,0 +1,55 @@
+import z from "zod";
+
+export const OrgConfigSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  url: z.url(),
+  logo_url: z.url(),
+  start_date: z.string().optional(),
+});
+
+export const MetaConfigSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  image_url: z.url(),
+  site_url: z.url(),
+  favicon_url: z.string(), // Can be relative path or URL
+});
+
+export const PluginInstanceConfigSchema = z.object({
+  name: z.string().optional(),
+  source: z.string(),
+  config: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const DataExplorerConfigSchema = z.object({
+  enabled: z.boolean().optional().default(true),
+  source: z.string().optional(),
+});
+
+export const LeaderboardConfigSchema = z.object({
+  data_update_frequency: z.string().optional(),
+  theme: z.string().optional(),
+  aggregates: z
+    .object({
+      global: z.array(z.string()).optional(),
+      contributor: z.array(z.string()).optional(),
+    })
+    .optional(),
+  plugins: z.record(z.string(), PluginInstanceConfigSchema).optional(),
+  data_explorer: DataExplorerConfigSchema.optional(),
+});
+
+export const ConfigSchema = z.object({
+  org: OrgConfigSchema,
+  meta: MetaConfigSchema,
+  leaderboard: LeaderboardConfigSchema,
+});
+
+// Export inferred types
+export type OrgConfig = z.infer<typeof OrgConfigSchema>;
+export type MetaConfig = z.infer<typeof MetaConfigSchema>;
+export type DataExplorerConfig = z.infer<typeof DataExplorerConfigSchema>;
+export type PluginInstanceConfig = z.infer<typeof PluginInstanceConfigSchema>;
+export type LeaderboardConfig = z.infer<typeof LeaderboardConfigSchema>;
+export type Config = z.infer<typeof ConfigSchema>;

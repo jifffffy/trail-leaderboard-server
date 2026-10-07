@@ -1,0 +1,36 @@
+{
+  "name": "create-starter-data-repo",
+  "version": "0.1.0",
+  "description": "CLI tool to initialize leaderboard data repositories",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "create-starter-data-repo": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "leaderboard",
+    "data-repository",
+    "generator",
+    "cli"
+  ],
+  "author": "Open Healthcare Network",
+  "license": "MIT",
+  "dependencies": {
+    "js-yaml": "^4.3.2",
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.19.43",
+    "@types/prompts": "^2.4.9",
+    "typescript": "^5.9.3"
+  }
+}

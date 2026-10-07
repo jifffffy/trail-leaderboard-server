@@ -1,0 +1,13 @@
+packages:
+  - apps/*
+  - packages/*
+allowBuilds:
+  core-js-pure: false
+  esbuild: false
+  sharp: false
+  unrs-resolver: false
+  workerd: false
+
+overrides:
+  create-starter-plugin: link:packages/create-plugin
+  vite: 7.3.2
