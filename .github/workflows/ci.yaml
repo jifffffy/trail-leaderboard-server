@@ -7,6 +7,8 @@ on:
   pull_request:
     branches:
       - main
+  repository_dispatch:
+    types: [data_updated]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -25,20 +27,20 @@ jobs:
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Checkout data repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: jifffffy/trail-data
           path: data
           ssh-key: ${{ secrets.DATA_REPO_SSH_KEY }}
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -66,15 +68,15 @@ jobs:
         run: touch apps/web/out/.nojekyll
 
       - name: Configure Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: apps/web/out
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-build
           path: apps/web/out/
@@ -96,4 +98,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
