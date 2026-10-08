@@ -90,3 +90,6 @@ Editing `packages/api` source is not picked up by other packages until you re-ru
   key secret), then runs `build:packages` → `test` → `build:data` → `build:web` with
   `LEADERBOARD_DATA_DIR=./data`, and deploys to GitHub Pages. Data/config live in
   that repo; this repo commits none.
+- CI also triggers on `repository_dispatch: [data_updated]`; the data repo's
+  `.github/workflows/notify-server.yml` dispatches that on every push (using the
+  `DISPATCH_TOKEN` secret stored in the data repo), so data changes rebuild the site.
