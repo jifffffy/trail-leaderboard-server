@@ -11,7 +11,9 @@ on:
     types: [data_updated]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Include the event name so a push build and a data_updated dispatch build do
+  # not cancel each other (both run on refs/heads/main).
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 permissions:
@@ -90,6 +92,12 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
+    # Serialize Pages deployments across concurrent builds (queue, don't cancel),
+    # so a push build and a dispatch build can run in parallel but publish safely.
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
 
     permissions:
       pages: write
