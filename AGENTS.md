@@ -39,9 +39,9 @@ Editing `packages/api` source is not picked up by other packages until you re-ru
 - Data phases: `pnpm data:import|scrape|aggregate|evaluate|export`, or run one with
   `pnpm --filter @starter/plugin-runner dev <phase>`. Phase order is
   import → setup → scrape → aggregate → evaluate → export.
-- `pnpm build:data` runs with `--fresh` (drops all tables first), so a full build
-  is a clean sync; add `--fresh` manually for a fresh full run. Individual phase
-  commands stay incremental.
+- Updates are **incremental** (upsert by primary key; no deletes). Re-running
+  against an existing DB accumulates rather than replaces; delete
+  `${LEADERBOARD_DATA_DIR}/.leaderboard.db` for a clean rebuild.
 - Regenerate the JSON schema after editing `ConfigSchema`:
   `pnpm generate:schema` → `config.schema.json`.
 
@@ -55,8 +55,7 @@ Editing `packages/api` source is not picked up by other packages until you re-ru
 - `packages/plugin-race-articles`: validates offline-authored race articles
   (`<dataDir>/sources/races/*.md`, strict frontmatter, no prose parsing) and maps
   organizers to the `organizer` table and race events to the `race` table
-  (distance categories in `meta`). Each `scrape` replaces the rows it owns (marked
-  by `meta.plugin`), so removed articles disappear; see its README.
+  (distance categories in `meta`); increments via upsert; see its README.
 - Web JSON API: `apps/web/app/api/{organizers,races}.json/route.ts` are
   `force-static` route handlers exported at build time; data shaping lives in
   `apps/web/lib/data/race-api.ts`.

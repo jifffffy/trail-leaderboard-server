@@ -12,7 +12,6 @@
  */
 
 import type {
-  Database,
   Organizer,
   Plugin,
   PluginContext,
@@ -59,22 +58,12 @@ const plugin: Plugin = {
     }
 
     if (!found) {
-      ctx.logger.warn(
-        `Race articles directory not found (${articlesDir}); keeping existing data`,
-      );
+      ctx.logger.warn(`Race articles directory not found (${articlesDir})`);
       return;
     }
 
-    // Full sync: this plugin is the source of truth for the rows it owns, so
-    // drop them and re-insert exactly what the current articles describe. This
-    // removes races/organizers that were deleted from the corpus.
-    await clearOwnedRows(ctx.db);
-    ctx.logger.info(`Synchronized ${articles.length} race articles`);
-
     if (articles.length === 0) {
-      ctx.logger.warn(
-        `No valid race articles found in ${articlesDir}; cleared existing race data`,
-      );
+      ctx.logger.warn(`No race articles found in ${articlesDir}`);
       return;
     }
 
@@ -143,46 +132,8 @@ function toOrganizer(organizer: ArticleOrganizer): Organizer {
     avatar_url: organizer.logo_url ?? null,
     bio: organizer.bio ?? null,
     joining_date: null,
-    meta: { url: organizer.url ?? null, plugin: PLUGIN_NAME },
+    meta: { url: organizer.url ?? null },
   };
-}
-
-/**
- * Delete every race and organizer contributed by this plugin.
- *
- * Organizers are identified by the `plugin` marker in their `meta`. Races
- * are deleted by `organizer` (not by their own meta) so that rows round-tripped
- * through import/export — where race `meta` can be double-encoded — are still
- * removed, and so the foreign key from race → organizer is satisfied.
- */
-async function clearOwnedRows(db: Database): Promise<void> {
-  const owned = await db.execute(
-    "SELECT username FROM organizer WHERE json_extract(meta, '$.plugin') = ?",
-    [PLUGIN_NAME],
-  );
-
-  const usernames = owned.rows.map((row) => String(row.username));
-  if (usernames.length === 0) return;
-
-  const placeholders = usernames.map(() => "?").join(", ");
-
-  // Delete dependents before the organizer row (foreign keys are enforced).
-  await db.execute(
-    `DELETE FROM race WHERE organizer IN (${placeholders})`,
-    usernames,
-  );
-  await db.execute(
-    `DELETE FROM organizer_aggregate WHERE organizer IN (${placeholders})`,
-    usernames,
-  );
-  await db.execute(
-    `DELETE FROM organizer_badge WHERE organizer IN (${placeholders})`,
-    usernames,
-  );
-  await db.execute(
-    `DELETE FROM organizer WHERE username IN (${placeholders})`,
-    usernames,
-  );
 }
 
 function toRace(
@@ -203,7 +154,6 @@ function toRace(
     text: body || null,
     points: null,
     meta: {
-      plugin: PLUGIN_NAME,
       event_title: event.title,
       event_slug: event.slug,
       location: event.location ?? null,

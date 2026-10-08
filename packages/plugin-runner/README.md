@@ -25,19 +25,17 @@ pnpm plugin-runner export       # Export data from database back to data-repo
 # Options
 pnpm plugin-runner --data-dir=/path/to/data-repo   # Specify data directory
 pnpm plugin-runner --debug                          # Enable debug logging
-pnpm plugin-runner --fresh                          # Drop all tables first (full sync)
 pnpm plugin-runner scrape --debug                   # Combine phase with options
 ```
 
-## Full sync
+## Incremental updates
 
-`--fresh` drops every table before the run, so the build reflects only the
-current sources instead of accumulating over previous runs. The root
-`pnpm build:data` script passes `--fresh` by default; individual phase commands
-(`pnpm data:scrape`, ...) stay incremental.
-
-Plugins that own their data should also replace it on each `scrape` so that
-entries removed from the source disappear — see `@starter/plugin-race-articles`.
+Updates are **incremental**: every phase upserts by primary key
+(`ON CONFLICT DO UPDATE` / `INSERT OR IGNORE`), so re-running only adds or
+updates rows — it never deletes. A run against an existing database accumulates
+with it rather than replacing it. Removed source entries are therefore not
+pruned; delete `${LEADERBOARD_DATA_DIR}/.leaderboard.db` (or start from a fresh
+data dir) for a clean rebuild.
 
 ## Environment Variables
 

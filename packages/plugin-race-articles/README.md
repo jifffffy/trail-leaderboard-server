@@ -61,16 +61,14 @@ categories: # required, at least one
 The schema is enforced with Zod (`src/schema.ts`). Files that fail validation are
 skipped and reported as warnings; the run does not fail.
 
-## Sync semantics
+## Update semantics
 
-This plugin is the source of truth for the rows it writes. On every `scrape` it
-deletes its own organizers and races (identified by `meta.plugin`) and re-inserts
-exactly what the current articles describe, so deleting an article removes its
-race. A missing `articlesDir` is treated as misconfiguration and leaves existing
-data untouched; an existing-but-empty directory clears the plugin's data.
-
-Combined with the runner's `--fresh` flag (used by `pnpm build:data`), every
-full build is a clean, synchronized rebuild.
+Updates are **incremental**. Each article is upserted by key — organizer by
+`organizer.slug`, race by `event.slug` — so re-running adds new events and
+updates existing ones; it never deletes. Deleting an article from the corpus
+does **not** remove its race from an existing database; start from a fresh data
+dir (or delete `.leaderboard.db`) if you need a clean rebuild. A missing
+`articlesDir` is a no-op (warned).
 
 ## Register in `config.yaml`
 

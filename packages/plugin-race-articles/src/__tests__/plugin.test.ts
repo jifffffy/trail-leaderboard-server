@@ -134,7 +134,7 @@ describe("race-articles plugin", () => {
     ]);
   });
 
-  it("creates an organizer organizer and one race per event", async () => {
+  it("creates an organizer and one race per event", async () => {
     await writeFile(join(articlesDir, "fuchuan.md"), ARTICLE, "utf8");
     await plugin.setup!({ db, config: {}, orgConfig, logger });
     await plugin.scrape!({ db, config: { articlesDir }, orgConfig, logger });
@@ -200,22 +200,17 @@ describe("race-articles plugin", () => {
     expect((races.rows[0] as { count: number }).count).toBe(2);
   });
 
-  it("removes races deleted from the corpus on re-scrape", async () => {
-    const first = join(articlesDir, "a-fuchuan.md");
-    await writeFile(first, ARTICLE, "utf8");
+  it("is incremental: re-scraping upserts by slug without duplicating", async () => {
+    await writeFile(join(articlesDir, "a-fuchuan.md"), ARTICLE, "utf8");
     await writeFile(join(articlesDir, "b-moumou.md"), SECOND_ARTICLE, "utf8");
     await plugin.setup!({ db, config: {}, orgConfig, logger });
+
+    // Run twice; upserts must not create duplicate organizer/race rows.
+    await plugin.scrape!({ db, config: { articlesDir }, orgConfig, logger });
     await plugin.scrape!({ db, config: { articlesDir }, orgConfig, logger });
 
-    let count = await db.execute("SELECT COUNT(*) as count FROM race");
-    expect((count.rows[0] as { count: number }).count).toBe(2);
-
-    // Deleting a source file must remove its race on the next run.
-    await rm(first);
-    await plugin.scrape!({ db, config: { articlesDir }, orgConfig, logger });
-
-    count = await db.execute("SELECT COUNT(*) as count FROM race");
-    expect((count.rows[0] as { count: number }).count).toBe(1);
+    const races = await db.execute("SELECT COUNT(*) as count FROM race");
+    expect((races.rows[0] as { count: number }).count).toBe(2);
     const organizers = await db.execute(
       "SELECT COUNT(*) as count FROM organizer",
     );

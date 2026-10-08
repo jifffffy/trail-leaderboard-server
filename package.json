@@ -20,7 +20,7 @@
     "data:export": "cd packages/plugin-runner && tsx src/index.ts export",
     "db:seed": "pnpm --filter @starter/leaderboard-api seed",
     "build:packages": "pnpm --filter @starter/leaderboard-api build && pnpm --filter @starter/plugin-runner build && pnpm --filter @starter/plugin-dummy build && pnpm --filter @starter/plugin-race-articles build && pnpm --filter create-starter-plugin build && pnpm --filter create-starter-data-repo build && pnpm --filter @starter/mcp-server build",
-    "build:data": "cd packages/plugin-runner && tsx src/index.ts --fresh",
+    "build:data": "cd packages/plugin-runner && tsx src/index.ts",
     "build:web": "pnpm --filter @starter/web build",
     "build": "pnpm build:packages && pnpm build:data && pnpm build:web",
     "clean": "pnpm -r clean",

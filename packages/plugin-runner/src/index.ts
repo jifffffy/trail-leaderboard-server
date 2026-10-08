@@ -3,11 +3,7 @@
  * Plugin runner CLI entry point
  */
 
-import {
-  dropAllTables,
-  getDataDir,
-  initializeSchema,
-} from "@starter/leaderboard-api";
+import { getDataDir } from "@starter/leaderboard-api";
 import { parseArgs } from "util";
 import { runAggregation } from "./aggregator";
 import { loadConfig } from "./config";
@@ -56,10 +52,6 @@ async function main() {
         type: "boolean",
         default: false,
       },
-      fresh: {
-        type: "boolean",
-        default: false,
-      },
     },
   });
 
@@ -101,14 +93,6 @@ async function main() {
     log.info("Initializing database");
     const db = await initDatabase(dataDir);
     log.info("Database initialized");
-
-    // Fresh run: drop all tables so the build reflects only the current source
-    // data instead of accumulating over previous runs.
-    if (values.fresh) {
-      log.info("Fresh run: resetting database");
-      await dropAllTables(db);
-      await initializeSchema(db);
-    }
 
     // Import phase
     if (shouldRun("import")) {
