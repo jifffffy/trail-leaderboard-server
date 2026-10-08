@@ -27,6 +27,13 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v6
 
+      - name: Checkout data repo
+        uses: actions/checkout@v6
+        with:
+          repository: jifffffy/trail-data
+          path: data
+          ssh-key: ${{ secrets.DATA_REPO_SSH_KEY }}
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
 
@@ -47,12 +54,12 @@ jobs:
 
       - name: Build data
         env:
-          LEADERBOARD_DATA_DIR: ./race-data
+          LEADERBOARD_DATA_DIR: ./data
         run: pnpm build:data
 
       - name: Build web
         env:
-          LEADERBOARD_DATA_DIR: ./race-data
+          LEADERBOARD_DATA_DIR: ./data
         run: pnpm build:web
 
       - name: Disable Jekyll

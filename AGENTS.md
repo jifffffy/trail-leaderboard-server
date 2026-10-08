@@ -85,8 +85,8 @@ Editing `packages/api` source is not picked up by other packages until you re-ru
 - Node 20+ (CI uses Node 22); pnpm 10.33.0 pinned via `packageManager`.
 - Next config uses `output: "export"`, `images.unoptimized`, and transpiles
   `@starter/leaderboard-api`.
-- CI (`.github/workflows/ci.yaml`) runs: install → `build:packages` → `test` →
-  `build:data` and `build:web` with `LEADERBOARD_DATA_DIR=./race-data` → deploy the
-  export to GitHub Pages. `race-data/` is the committed data repo (`config.yaml` +
-  `sources/races/*.md`); its exported `organizers/`, `races/`, and `.leaderboard.db`
-  are gitignored.
+- CI (`.github/workflows/ci.yaml`) checks out the **separate private data repo**
+  `jifffffy/trail-data` into `./data` (via the `DATA_REPO_SSH_KEY` read-only deploy
+  key secret), then runs `build:packages` → `test` → `build:data` → `build:web` with
+  `LEADERBOARD_DATA_DIR=./data`, and deploys to GitHub Pages. Data/config live in
+  that repo; this repo commits none.

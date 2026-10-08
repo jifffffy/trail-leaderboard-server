@@ -54,12 +54,6 @@ pnpm-debug.log*
 # Config (should be in data-repo)
 apps/web/config.yaml
 
-# Data directory (should be separate repo)
+# Data directory (separate repo)
 /data
 data-repo/
-
-# Race data repo: config.yaml + sources/ are tracked; exports are generated
-race-data/organizers/
-race-data/races/
-race-data/aggregates/
-race-data/badges/
